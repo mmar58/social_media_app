@@ -34,6 +34,17 @@ export default function FeedPage() {
           return p;
         }));
       });
+      socket.on("receive_comment", ({ postId, comment }) => {
+        setPosts((prev) => prev.map(p => {
+          if (p.id === Number(postId)) {
+            // Avoid duplicates (our own comment is added locally already)
+            const alreadyExists = (p.comments || []).some((c: any) => c.id === comment.id);
+            if (alreadyExists) return p;
+            return { ...p, comments: [...(p.comments || []), comment] };
+          }
+          return p;
+        }));
+      });
 
       return () => {
         socket.disconnect();
@@ -78,7 +89,25 @@ export default function FeedPage() {
       if (res.ok) {
         setPosts(posts.map(p => {
           if (p.id === id) {
-            return { ...p, isLiked: data.action === "liked", likes: data.action === "liked" ? p.likes + 1 : p.likes - 1 };
+            let updatedLikers = [...(p.likers || [])];
+            if (data.action === "liked") {
+              // Add current user to front of likers stack (max 8)
+              const newLiker = {
+                userId: data.likerUserId,
+                profile_picture: data.likerProfilePicture,
+                name: data.likerName
+              };
+              updatedLikers = [newLiker, ...updatedLikers.filter((l: any) => l.userId !== data.likerUserId)].slice(0, 8);
+            } else {
+              // Remove current user from likers stack
+              updatedLikers = updatedLikers.filter((l: any) => l.userId !== data.likerUserId);
+            }
+            return {
+              ...p,
+              isLiked: data.action === "liked",
+              likes: data.action === "liked" ? p.likes + 1 : p.likes - 1,
+              likers: updatedLikers
+            };
           }
           return p;
         }));
