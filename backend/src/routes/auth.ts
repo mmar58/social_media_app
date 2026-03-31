@@ -15,15 +15,18 @@ router.post("/register", async (req, res) => {
     if (existing) return res.status(400).json({ message: "Email already taken" });
     
     const hashedPassword = await bcrypt.hash(password, 10);
+    const profile_picture = `https://ui-avatars.com/api/?name=${encodeURIComponent(first_name + ' ' + last_name)}&background=random`;
+    
     const [id] = await db("users").insert({
       first_name,
       last_name,
       email,
       password: hashedPassword,
+      profile_picture
     });
     
-    const token = jwt.sign({ id, email, first_name, last_name }, process.env.JWT_SECRET || "secret", { expiresIn: "7d" });
-    res.json({ token, user: { id, first_name, last_name, email } });
+    const token = jwt.sign({ id, email, first_name, last_name, profile_picture }, process.env.JWT_SECRET || "secret", { expiresIn: "7d" });
+    res.json({ token, user: { id, first_name, last_name, email, profile_picture } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -39,12 +42,12 @@ router.post("/login", async (req, res) => {
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
     
     const token = jwt.sign(
-      { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name }, 
+      { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name, profile_picture: user.profile_picture }, 
       process.env.JWT_SECRET || "secret", 
       { expiresIn: "7d" }
     );
     
-    res.json({ token, user: { id: user.id, first_name: user.first_name, last_name: user.last_name, email: user.email } });
+    res.json({ token, user: { id: user.id, first_name: user.first_name, last_name: user.last_name, email: user.email, profile_picture: user.profile_picture } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

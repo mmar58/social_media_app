@@ -9,7 +9,7 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
     const userId = req.user.id;
     
     const posts = await db("posts")
-      .select("posts.*", "users.first_name", "users.last_name")
+      .select("posts.*", "users.first_name", "users.last_name", "users.profile_picture")
       .join("users", "posts.user_id", "users.id")
       .where(function() {
         this.where("visibility", "public").orWhere("posts.user_id", userId);
@@ -19,20 +19,22 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
     // Fetch likes and comments for posts
     for (const post of posts) {
       post.authorName = `${post.first_name} ${post.last_name}`;
+      post.authorProfilePicture = post.profile_picture;
       
       const likes = await db("likes").where({ target_type: "post", target_id: post.id });
       post.likes = likes.length;
       post.isLiked = likes.some(l => l.user_id === userId);
       
       const comments = await db("comments")
-        .select("comments.*", "users.first_name", "users.last_name")
+        .select("comments.*", "users.first_name", "users.last_name", "users.profile_picture")
         .join("users", "comments.user_id", "users.id")
         .where({ post_id: post.id, parent_id: null })
         .orderBy("created_at", "asc");
         
       post.comments = comments.map(c => ({
         ...c,
-        authorName: `${c.first_name} ${c.last_name}`
+        authorName: `${c.first_name} ${c.last_name}`,
+        authorProfilePicture: c.profile_picture
       }));
     }
 
@@ -54,12 +56,13 @@ router.post("/", authenticate, async (req: AuthRequest, res) => {
     });
     
     const post = await db("posts")
-      .select("posts.*", "users.first_name", "users.last_name")
+      .select("posts.*", "users.first_name", "users.last_name", "users.profile_picture")
       .join("users", "posts.user_id", "users.id")
       .where("posts.id", id)
       .first();
       
     post.authorName = `${post.first_name} ${post.last_name}`;
+    post.authorProfilePicture = post.profile_picture;
     post.likes = 0;
     post.isLiked = false;
     post.comments = [];

@@ -21,7 +21,7 @@ export default function Header() {
           <div className="collapse navbar-collapse d-flex justify-content-end" id="navbarSupportedContent">
             <div className="_header_nav_profile" style={{ cursor: "pointer" }} onClick={() => setDropdownOpen(!dropdownOpen)}>
               <div className="_header_nav_profile_image">
-                <img src="/assets/images/profile.png" alt="Image" className="_nav_profile_img" />
+                <img src={user.profile_picture || "/assets/images/profile.png"} alt="Image" className="_nav_profile_img" style={{ borderRadius: "50%", objectFit: "cover" }} />
               </div>
               <div className="_header_nav_dropdown">
                 <p className="_header_nav_para">{user.first_name} {user.last_name}</p>

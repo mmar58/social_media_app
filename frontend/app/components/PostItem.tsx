@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 export default function PostItem({ post, onLike }: any) {
+  const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
 
@@ -12,7 +14,7 @@ export default function PostItem({ post, onLike }: any) {
         <div className="_feed_inner_timeline_post_top">
           <div className="_feed_inner_timeline_post_box">
             <div className="_feed_inner_timeline_post_box_image">
-              <img src="/assets/images/post_img.png" alt="" className="_post_img" />
+              <img src={post.authorProfilePicture || "/assets/images/post_img.png"} alt="" className="_post_img" style={{ borderRadius: "50%", objectFit: "cover", width: "40px", height: "40px" }} />
             </div>
             <div className="_feed_inner_timeline_post_box_txt">
               <h4 className="_feed_inner_timeline_post_box_title">{post.authorName}</h4>
@@ -67,8 +69,11 @@ export default function PostItem({ post, onLike }: any) {
           <div className="_comment_main" style={{ marginTop: "20px" }}>
             {post.comments?.map((c: any) => (
               <div key={c.id} style={{ marginBottom: "16px" }}>
-                <strong>{c.authorName}</strong>
-                <p>{c.content}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <img src={c.authorProfilePicture || "/assets/images/txt_img.png"} alt="" style={{ borderRadius: "50%", objectFit: "cover", width: "32px", height: "32px" }} />
+                  <strong>{c.authorName}</strong>
+                </div>
+                <p style={{ marginLeft: '42px', marginTop: '4px' }}>{c.content}</p>
               </div>
             ))}
           </div>

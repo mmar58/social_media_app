@@ -2,7 +2,10 @@
 
 import React, { useState } from "react";
 
+import { useAuth } from "../context/AuthContext";
+
 export default function CreatePostBox({ onPost }: { onPost: (content: string, visibility: string) => void }) {
+  const { user } = useAuth();
   const [content, setContent] = useState("");
   const [visibility, setVisibility] = useState("public");
 
@@ -16,7 +19,7 @@ export default function CreatePostBox({ onPost }: { onPost: (content: string, vi
     <div className="_feed_inner_text_area _b_radious6 _padd_b24 _padd_t24 _padd_r24 _padd_l24 _mar_b16">
       <div className="_feed_inner_text_area_box">
         <div className="_feed_inner_text_area_box_image">
-          <img src="/assets/images/txt_img.png" alt="Image" className="_txt_img" />
+          <img src={user?.profile_picture || "/assets/images/txt_img.png"} alt="Image" className="_txt_img" style={{ borderRadius: "50%", objectFit: "cover", width: "40px", height: "40px" }} />
         </div>
         <div className="form-floating _feed_inner_text_area_box_form">
           <textarea 
