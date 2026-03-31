@@ -87,6 +87,26 @@ export default function FeedPage() {
     } catch (err) {}
   };
 
+  const handleComment = async (postId: number, content: string) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/posts/${postId}/comment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ content }),
+      });
+      if (res.ok) {
+        const { comment } = await res.json();
+        setPosts(posts.map(p => {
+          if (p.id === postId) {
+            return { ...p, comments: [...(p.comments || []), comment] };
+          }
+          return p;
+        }));
+        socket?.emit("new_comment", { postId, comment });
+      }
+    } catch (err) {}
+  };
+
   if (loading || !user) {
     return <Loader />;
   }
@@ -115,7 +135,7 @@ export default function FeedPage() {
                       
                       <div className="posts-container">
                         {posts.map((post) => (
-                          <PostItem key={post.id} post={post} onLike={handleLike} />
+                          <PostItem key={post.id} post={post} onLike={handleLike} onComment={handleComment} />
                         ))}
                       </div>
                     </div>
