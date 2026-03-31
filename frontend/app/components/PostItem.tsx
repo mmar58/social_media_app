@@ -56,6 +56,18 @@ export default function PostItem({ post, onLike, onComment }: any) {
 
         {/* Post Content */}
         <h4 className="_feed_inner_timeline_post_title">{post.content}</h4>
+
+        {/* Post Image */}
+        {post.image_url && (
+          <div className="_feed_inner_timeline_image">
+            <img
+              src={`http://localhost:5000${post.image_url}`}
+              alt="Post"
+              className="_time_img"
+              style={{ width: "100%", borderRadius: "6px", marginTop: "12px", objectFit: "cover", maxHeight: "500px" }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Reaction Counts Row */}
