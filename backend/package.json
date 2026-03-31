@@ -1,0 +1,19 @@
+{
+  "name": "social_backend",
+  "version": "1.0.0",
+  "description": "The backend for social media app",
+  "keywords": [
+    "social",
+    "backend",
+    "nodejs",
+    "expressjs",
+    "socket.io"
+  ],
+  "license": "ISC",
+  "author": "mmar58",
+  "type": "commonjs",
+  "main": "/dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
