@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import Header from "../components/Header";
 import CreatePostBox from "../components/CreatePostBox";
+import Loader from "../components/Loader";
 import PostItem from "../components/PostItem";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
@@ -87,7 +88,7 @@ export default function FeedPage() {
   };
 
   if (loading || !user) {
-    return <div>Loading...</div>;
+    return <Loader />;
   }
 
   return (
