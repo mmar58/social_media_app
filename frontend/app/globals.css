@@ -1,4 +1,14 @@
 /* Global CSS overrides */
+@media (min-width: 1400px) {
+  .container._custom_container {
+    max-width: 1500px !important;
+  }
+}
+
+body {
+  zoom: .99;
+  /* Increase the size of all items universally to fix the zoomed-out look */
+}
 
 /* Sticky Sidebars - scroll independently from center feed */
 ._sidebar_sticky {
@@ -6,12 +16,15 @@
   top: 90px;
   max-height: calc(100vh - 100px);
   overflow-y: auto;
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 ._sidebar_sticky::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 /* Post creation action bar layout */
@@ -56,7 +69,7 @@
   ._feed_inner_text_area_right_actions {
     gap: 6px;
   }
-  
+
   ._visibility_select {
     padding: 5px 8px;
     font-size: 12px;
