@@ -9,9 +9,8 @@ import PostItem from "../components/PostItem";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 
-let socket: Socket;
-
 export default function FeedPage() {
+  const socketRef = React.useRef<Socket | null>(null);
   const { user, loading, token } = useAuth();
   const router = useRouter();
   const [posts, setPosts] = useState<any[]>([]);
@@ -21,8 +20,9 @@ export default function FeedPage() {
       router.push("/login");
     } else if (user && token) {
       fetchPosts();
+      const socket = io("http://localhost:5000", { transports: ["websocket"] });
+      socketRef.current = socket;
       
-      socket = io("http://localhost:5000");
       socket.on("receive_post", (newPost) => {
         setPosts((prev) => [newPost, ...prev]);
       });
@@ -74,7 +74,7 @@ export default function FeedPage() {
       if (res.ok) {
         const { post } = await res.json();
         setPosts([post, ...posts]);
-        socket?.emit("new_post", post);
+        socketRef.current?.emit("new_post", post);
       }
     } catch (err) {}
   };
@@ -111,7 +111,7 @@ export default function FeedPage() {
           }
           return p;
         }));
-        socket?.emit("like_post", { postId: id, action: data.action });
+        socketRef.current?.emit("like_post", { postId: id, action: data.action });
       }
     } catch (err) {}
   };
@@ -131,7 +131,7 @@ export default function FeedPage() {
           }
           return p;
         }));
-        socket?.emit("new_comment", { postId, comment });
+        socketRef.current?.emit("new_comment", { postId, comment });
       }
     } catch (err) {}
   };
