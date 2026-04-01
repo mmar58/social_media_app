@@ -47,11 +47,28 @@ CREATE INDEX idx_notifications_user_created ON notifications (user_id, created_a
 
 ### In-memory socket map
 
-`backend/src/app.ts` stores `userId -> socketId` in a process-local map. That breaks down when:
+`backend/src/app.ts` stores `userId -> Set<socketId>` in a process-local map. That is better for multi-device support on a single node, but it still breaks down when:
 
 - the process restarts.
 - multiple backend instances run behind a load balancer.
-- users connect from multiple devices.
+- a shared delivery layer is needed across regions.
+
+### Broadcast-style real-time events
+
+Several feed synchronization events are still broadcast-oriented rather than room-scoped.
+
+That creates two problems:
+
+- unnecessary fan-out to clients that should not care about the event.
+- weak authorization boundaries for future private or follower-only content models.
+
+The next real-time hardening step should be moving to room-based delivery keyed by user id and, where needed, post id.
+
+### Duplicated client-side socket consumers
+
+The feed and notification modal currently maintain separate socket connections and duplicate parts of the same live-update logic.
+
+That is acceptable for this scope, but a shared socket provider or event store would be a cleaner next step.
 
 ### Local file storage
 
@@ -202,6 +219,8 @@ Redis helps, but it is not the whole answer.
 
 - introduce backend services for posts, hydration, and notifications.
 - introduce a frontend API client instead of repeated raw fetch calls.
+- unify frontend socket consumption behind a shared provider or hook.
+- centralize post mutation state updates so feed and modal do not drift.
 - add request validation.
 - add rate limiting.
 - add retry-aware async jobs.

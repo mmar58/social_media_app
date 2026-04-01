@@ -39,6 +39,7 @@ The main frontend files are:
 - `frontend/app/register/page.tsx`: registration screen.
 - `frontend/app/feed/page.tsx`: authenticated feed screen.
 - `frontend/app/context/AuthContext.tsx`: user state, token state, notification state, and socket registration.
+- `frontend/app/lib/api.ts`: environment-aware API, socket, and media URL helpers.
 - `frontend/app/components/Header.tsx`: search, notification dropdown, and user menu.
 - `frontend/app/components/CreatePostBox.tsx`: post creation form.
 - `frontend/app/components/PostItem.tsx`: post card with likes, comments, replies, and jump targeting.
@@ -55,6 +56,9 @@ The main backend files are:
 - `backend/src/routes/auth.ts`: register, login, and current-user endpoints.
 - `backend/src/routes/posts.ts`: feed retrieval, post creation, likes, comments, and replies.
 - `backend/src/routes/notifications.ts`: notification list, read state, and detail hydration.
+- `backend/src/services/postHydration.ts`: batched feed and notification post hydration.
+- `backend/src/services/notificationService.ts`: centralized notification persistence and socket fan-out.
+- `backend/src/validation/`: request validation schemas and middleware.
 
 ## Database model
 
@@ -94,8 +98,8 @@ comments 1 --- * comments (reply chain via parent_id)
 ### Feed load flow
 
 1. `frontend/app/feed/page.tsx` checks auth state.
-2. If the user exists, it fetches `GET /api/posts?limit=50`.
-3. The backend returns posts with author metadata, likes, comment trees, and comment-like state.
+2. If the user exists, it fetches `GET /api/posts?limit=20` and optionally a `cursor`.
+3. The backend returns posts with author metadata, batched like state, comment trees, and pagination metadata.
 4. The frontend renders the result using `PostItem` components.
 
 ### Post and interaction flow
@@ -103,7 +107,7 @@ comments 1 --- * comments (reply chain via parent_id)
 1. `CreatePostBox` submits `multipart/form-data` to `POST /api/posts`.
 2. `PostItem` triggers likes, comments, comment likes, and replies through dedicated mutation endpoints.
 3. Backend route handlers persist the mutation and return the minimal payload needed by the UI.
-4. For public posts and comments, the frontend also emits socket events to update other clients.
+4. The frontend emits socket events to update other active clients.
 
 ### Notification flow
 
@@ -112,7 +116,7 @@ comments 1 --- * comments (reply chain via parent_id)
 3. `AuthContext` prepends the notification to local state and increments `unread`.
 4. The header renders the notification list and unread badge.
 5. Opening a notification marks it read and fetches `GET /api/notifications/:id/details`.
-6. The frontend displays the hydrated post in `NotificationPostModal` and scrolls to the relevant comment or reply if needed.
+6. The frontend displays the hydrated post in `NotificationPostModal`, scrolls to the relevant comment or reply, and keeps the modal live-synced while it is open.
 
 ## Current project structure by concern
 
@@ -125,18 +129,20 @@ comments 1 --- * comments (reply chain via parent_id)
 
 ### API and business logic
 
-- Route handlers currently mix validation, persistence, and notification emission in the same file.
-- Notification creation is repeated in `backend/src/routes/posts.ts` instead of being centralized in a service.
-- The notification details route contains a `hydratePost` helper that duplicates some feed hydration logic.
+- Request validation is handled through reusable Zod middleware.
+- Notification creation is centralized in `backend/src/services/notificationService.ts`.
+- Feed and notification detail hydration share `backend/src/services/postHydration.ts`.
 
 ## Honest current limitations
 
-The codebase works as a functional product, but its current implementation is optimized for simplicity rather than scale:
+The codebase works as a functional product, but several implementation tradeoffs still favor simplicity over production-grade scale and security boundaries:
 
-- Feed hydration uses N+1 queries.
-- There is no cursor pagination.
+- Feed reads still hydrate full comment trees for each loaded post instead of paginating comment threads separately.
+- Real-time events are broadcast-oriented and not scoped to authorized rooms per post or user.
+- The feed page and notification modal maintain separate Socket.IO connections and duplicated mutation handlers.
+- There is no shared client-side data layer for retries, cache invalidation, or request deduplication.
 - Uploads are stored on the local filesystem.
 - Socket registration is kept in process memory.
-- API URLs are hard-coded in the frontend instead of being centralized through environment-aware config.
+- Schema evolution is still managed through `schema.sql` rather than formal migrations.
 
 Those limitations are expected in an interview-sized or early-stage implementation. The scaling plan is documented in `docs/SCALING.md`.

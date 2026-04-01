@@ -11,12 +11,13 @@ The codebase is split into two runtime applications:
 
 * Registers and logs users in with JWT-based authentication.
 * Persists the auth token in the browser and restores the user on reload.
-* Loads a feed of public posts plus the signed-in user's private posts.
+* Loads a cursor-paginated feed of public posts plus the signed-in user's private posts.
 * Creates posts with optional image upload and public/private visibility.
 * Supports likes on posts and comments.
 * Supports top-level comments and replies.
 * Pushes notifications in real time for post likes, comments, comment likes, and replies.
 * Opens notification details in a focused modal that scrolls to the related post, comment, or reply.
+* Live-syncs feed and notification modal updates for post likes, comments, comment likes, and replies.
 
 ## Workspace structure
 
@@ -81,7 +82,8 @@ The backend starts on `http://localhost:5000` by default.
 ### Frontend setup
 
 
-1. Install dependencies and start the UI:
+1. Copy `frontend/.env.example` to `frontend/.env.local` and adjust values if needed.
+2. Install dependencies and start the UI:
 
 ```bash
 cd frontend
@@ -115,10 +117,13 @@ pnpm test
 
 ## Important current implementation notes
 
-* The frontend currently calls the backend through hard-coded `http://localhost:5000` URLs in several places.
+* The frontend now resolves backend API and socket URLs through `frontend/app/lib/api.ts` and environment variables.
+* Feed reads use batched hydration and cursor pagination instead of the earlier per-post N+1 pattern.
+* Notification creation is centralized in a backend service and supports multiple active sockets per user.
 * Uploaded files are stored on local disk under `backend/uploads/`.
 * Real-time user-to-socket mapping is stored in memory inside the backend process.
-* Feed hydration currently uses multiple per-post queries, which is acceptable for small datasets but not for large-scale traffic.
+* Real-time feed and modal events are still broadcast-oriented rather than room-scoped, which is simple but not yet ideal for privacy or scale.
+* The notification modal and feed currently open separate Socket.IO connections and maintain duplicated client-side interaction state.
 
 ## Recommended reading order
 

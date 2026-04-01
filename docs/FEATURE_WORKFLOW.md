@@ -100,6 +100,10 @@ Current socket events:
 - `update_likes`
 - `new_comment`
 - `receive_comment`
+- `like_comment`
+- `update_comment_likes`
+- `reply_comment`
+- `receive_reply`
 - `notification`
 
 If a feature is user-targeted rather than broadcast-oriented, prefer a notification event over a broad broadcast.
@@ -209,9 +213,9 @@ Expected changes:
 
 If the product grows beyond a few more features, introduce these application boundaries:
 
-- A notification service on the backend.
-- A post hydration service on the backend.
-- A frontend API client module instead of repeated `fetch("http://localhost:5000/...`)` calls.
+- A shared frontend socket hook or provider so feed and modal updates do not duplicate connection logic.
+- A reusable frontend post interaction state layer so feed and modal do not duplicate optimistic updates.
 - Shared TypeScript types for API payloads.
+- A migration system for schema changes and indexes.
 
 Without those boundaries, each new feature will increase duplication and make regressions easier.

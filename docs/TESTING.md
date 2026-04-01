@@ -81,7 +81,9 @@ The current test suite is useful, but there are still important untested areas:
 * error paths for failed fetches.
 * upload validation and file handling edge cases.
 * socket-driven updates in the feed UI.
+* socket-driven updates in the notification modal.
 * search behavior and debounce behavior.
+* cursor pagination and load-more behavior.
 
 ## How to add backend tests
 
@@ -145,5 +147,6 @@ These will provide the best return first:
 3. Add backend tests for invalid auth and invalid notification ids.
 4. Add tests for feed search and debounced fetch behavior.
 5. Add tests for image upload validation and size limits.
+6. Add tests for socket-driven comment-like and reply synchronization in both feed and notification modal.
 
 

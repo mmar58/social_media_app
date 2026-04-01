@@ -84,6 +84,8 @@ The detail endpoint resolves:
 
 The frontend then opens `NotificationPostModal` and scrolls to the relevant element.
 
+While that modal is open, it also listens for live post, comment, comment-like, and reply events so the preview stays current.
+
 ## How to connect notifications from any new feature
 
 Use the steps below whenever a new feature should notify another user.
@@ -156,9 +158,9 @@ At minimum add:
 - a backend test proving detail resolution works.
 - a frontend test proving the notification label renders correctly if the UI behavior changed.
 
-## Recommended backend refactor
+## Current backend service shape
 
-The notification creation path is now centralized in a backend service. That removes the previous duplication from post, comment, like, and reply handlers.
+The notification creation path is centralized in `backend/src/services/notificationService.ts`. That removes the previous duplication from post, comment, like, and reply handlers.
 
 The current service already owns:
 
@@ -170,10 +172,10 @@ This keeps the route handlers focused on the write operation itself and makes fu
 
 The earlier route-level duplication was manageable at small scale, but it would become brittle as more features were added.
 
-The service follows the same shape recommended below:
+The service currently follows this shape:
 
 ```ts
-await sendNotification({
+await createNotification(app, {
   recipientUserId,
   senderUserId,
   type,
@@ -200,9 +202,10 @@ Use one of these patterns explicitly:
 
 ## Current limitations
 
-- Socket targeting uses an in-memory `Map<number, string>` in `backend/src/app.ts`.
-- Notification creation is duplicated across route handlers.
-- The frontend only knows how to render the current four notification types.
-- Notification detail hydration is post-centric.
+- Socket targeting uses an in-memory `Map<number, Set<string>>` in `backend/src/app.ts`.
+- Notification preview still depends on post-centric detail hydration.
+- The header notification renderer only supports the current four notification types.
+- Feed and notification modal sync currently rely on broadcast-style socket events rather than authorization-aware rooms.
+- Notification side effects still run inline in request handlers instead of through a queue or event bus.
 
 Those limitations are fine for the current app, but future features should not keep copying the same route-level pattern forever.
