@@ -127,7 +127,9 @@ export default function FeedPage() {
       if (res.ok) {
         const { post } = await res.json();
         setPosts([post, ...posts]);
-        socketRef.current?.emit("new_post", post);
+        if (post.visibility === "public") {
+          socketRef.current?.emit("new_post", post);
+        }
       }
     } catch (err) {}
   };

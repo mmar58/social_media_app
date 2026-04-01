@@ -32,7 +32,9 @@ io.on("connection", (socket) => {
   console.log("Client connected", socket.id);
   const socketMap: Map<number, string> = app.get("socketMap");
   socket.on("new_post", (post) => {
-    socket.broadcast.emit("receive_post", post);
+    if (post?.visibility === "public") {
+      socket.broadcast.emit("receive_post", post);
+    }
   });
 
   socket.on("like_post", (data) => {
