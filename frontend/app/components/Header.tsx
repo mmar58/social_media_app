@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
+import NotificationPostModal from "./NotificationPostModal";
 
 interface HeaderProps {
   searchQuery?: string;
@@ -11,13 +11,15 @@ interface HeaderProps {
 }
 
 export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
-  const router = useRouter();
-  const { user, logout, notifications, unread, markAllRead, markRead } = useAuth();
+  const { user, token, logout, notifications, unread, markAllRead, markRead } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [notifyMenuOpen, setNotifyMenuOpen] = useState(false);
   const [notificationFilter, setNotificationFilter] = useState<"all" | "unread">("all");
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<any | null>(null);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +62,33 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
 
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays} days ago`;
+  };
+
+  const handleNotificationOpen = async (notificationId: number) => {
+    if (!token) return;
+
+    setPreviewLoading(true);
+    setPreviewError(null);
+
+    try {
+      await markRead(notificationId);
+      const response = await fetch(`http://localhost:5000/api/notifications/${notificationId}/details`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load notification details");
+      }
+
+      setPreviewData(data);
+      setNotifyOpen(false);
+      setNotifyMenuOpen(false);
+    } catch (error: any) {
+      setPreviewError(error.message || "Failed to load notification details");
+    } finally {
+      setPreviewLoading(false);
+    }
   };
 
   return (
@@ -214,12 +243,7 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
                                 key={notification.id}
                                 className="_notification_box"
                                 style={{ background: notification.is_read ? "transparent" : "#1890ff0f" }}
-                                onClick={async () => {
-                                  await markRead(notification.id);
-                                  setNotifyOpen(false);
-                                  setNotifyMenuOpen(false);
-                                  router.push(`/feed?jump=${notification.type}:${notification.target_id}`);
-                                }}
+                                onClick={() => handleNotificationOpen(notification.id)}
                               >
                                 <div className="_notification_image">
                                   <img
@@ -375,6 +399,26 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
           </div>
         </div>
       </div>
+
+      {previewError && (
+        <div style={{ position: "fixed", right: 24, bottom: 24, zIndex: 2100, background: "#fff", color: "#112032", padding: "12px 16px", borderRadius: 12, boxShadow: "0 12px 32px rgba(0,0,0,0.16)" }}>
+          {previewError}
+        </div>
+      )}
+
+      {previewLoading && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(17,32,50,0.24)", zIndex: 2090, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#fff", padding: "14px 18px", borderRadius: 12 }}>Loading notification...</div>
+        </div>
+      )}
+
+      <NotificationPostModal
+        isOpen={!!previewData}
+        post={previewData?.post || null}
+        focusCommentId={previewData?.focusCommentId}
+        focusReplyId={previewData?.focusReplyId}
+        onClose={() => setPreviewData(null)}
+      />
     </>
   );
 }

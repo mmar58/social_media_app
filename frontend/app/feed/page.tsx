@@ -9,16 +9,32 @@ import PostItem from "../components/PostItem";
 import StoriesPlaceholder from "../components/StoriesPlaceholder";
 import LeftSidebar from "../components/LeftSidebar";
 import RightSidebar from "../components/RightSidebar";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 
 export default function FeedPage() {
   const socketRef = useRef<Socket | null>(null);
   const { user, loading, token } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [posts, setPosts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [jumpHandled, setJumpHandled] = useState<string | null>(null);
+
+  const jumpParam = searchParams.get("jump");
+
+  const parseJumpTarget = useCallback((jumpValue: string | null) => {
+    if (!jumpValue) return null;
+
+    const [type, rawId] = jumpValue.split(":");
+    const targetId = Number(rawId);
+    if (!type || Number.isNaN(targetId)) return null;
+
+    return { type, targetId };
+  }, []);
+
+  const jumpTarget = parseJumpTarget(jumpParam);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -236,6 +252,52 @@ export default function FeedPage() {
     } catch (err) {}
   };
 
+  useEffect(() => {
+    if (!jumpTarget || !posts.length || jumpHandled === jumpParam) return;
+
+    const getTargetElementId = () => {
+      if (jumpTarget.type === "like_post") {
+        return `post-${jumpTarget.targetId}`;
+      }
+
+      for (const post of posts) {
+        const topLevelComment = (post.comments || []).find((comment: any) => comment.id === jumpTarget.targetId);
+        if (topLevelComment) {
+          return `comment-${jumpTarget.targetId}`;
+        }
+
+        const matchedReply = (post.comments || []).some((comment: any) =>
+          (comment.replies || []).some((reply: any) => reply.id === jumpTarget.targetId)
+        );
+        if (matchedReply) {
+          return `reply-${jumpTarget.targetId}`;
+        }
+      }
+
+      if (jumpTarget.type === "comment") {
+        return `post-${jumpTarget.targetId}`;
+      }
+
+      return null;
+    };
+
+    const elementId = getTargetElementId();
+    if (!elementId) return;
+
+    const timeoutId = window.setTimeout(() => {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      setJumpHandled(jumpParam);
+
+      const nextUrl = window.location.pathname;
+      window.history.replaceState({}, "", nextUrl);
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [jumpHandled, jumpParam, jumpTarget, posts]);
+
   if (loading || !user) {
     return <Loader />;
   }
@@ -268,7 +330,15 @@ export default function FeedPage() {
                       {/* Posts */}
                       <div className="posts-container">
                         {posts.map((post) => (
-                          <PostItem key={post.id} post={post} onLike={handleLike} onComment={handleComment} onCommentLike={handleCommentLike} onCommentReply={handleCommentReply} />
+                          <PostItem
+                            key={post.id}
+                            post={post}
+                            jumpTarget={jumpTarget}
+                            onLike={handleLike}
+                            onComment={handleComment}
+                            onCommentLike={handleCommentLike}
+                            onCommentReply={handleCommentReply}
+                          />
                         ))}
                       </div>
                     </div>

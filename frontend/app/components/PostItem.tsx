@@ -1,16 +1,41 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
-export default function PostItem({ post, onLike, onComment, onCommentLike, onCommentReply }: any) {
+export default function PostItem({ post, jumpTarget, onLike, onComment, onCommentLike, onCommentReply }: any) {
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
   const [commentText, setCommentText] = useState("");
-  
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
+
+  const matchedCommentId = useMemo(() => {
+    if (!jumpTarget) return null;
+
+    const directMatch = post.comments?.find((comment: any) => comment.id === jumpTarget.targetId);
+    if (directMatch) return directMatch.id;
+
+    const replyMatch = post.comments?.find((comment: any) =>
+      (comment.replies || []).some((reply: any) => reply.id === jumpTarget.targetId)
+    );
+    if (replyMatch) return replyMatch.id;
+
+    return null;
+  }, [jumpTarget, post.comments, post.id]);
+
+  useEffect(() => {
+    if (!jumpTarget) return;
+
+    const matchesPost = jumpTarget.type === "like_post" && post.id === jumpTarget.targetId;
+    const matchesComment = matchedCommentId !== null;
+
+    if (matchesPost || matchesComment) {
+      setShowComments(true);
+      setShowAllComments(true);
+    }
+  }, [jumpTarget, matchedCommentId, post.id]);
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +53,11 @@ export default function PostItem({ post, onLike, onComment, onCommentLike, onCom
   };
 
   return (
-    <div className="_feed_inner_timeline_post_area _b_radious6 _padd_b24 _padd_t24 _mar_b16">
+    <div
+      id={`post-${post.id}`}
+      className="_feed_inner_timeline_post_area _b_radious6 _padd_b24 _padd_t24 _mar_b16"
+      style={{ scrollMarginTop: "110px" }}
+    >
       {/* Post Header */}
       <div className="_feed_inner_timeline_content _padd_r24 _padd_l24">
         <div className="_feed_inner_timeline_post_top">
@@ -204,7 +233,12 @@ export default function PostItem({ post, onLike, onComment, onCommentLike, onCom
               )}
             </div>
             {(showAllComments ? post.comments : post.comments.slice(0, 2)).map((c: any) => (
-              <div className="_comment_main" key={c.id}>
+              <div
+                id={`comment-${c.id}`}
+                className="_comment_main"
+                key={c.id}
+                style={{ scrollMarginTop: "120px" }}
+              >
                 <div className="_comment_image">
                   <a href="#0" className="_comment_image_link">
                     <img
@@ -216,7 +250,17 @@ export default function PostItem({ post, onLike, onComment, onCommentLike, onCom
                   </a>
                 </div>
                 <div className="_comment_area" style={{ flex: 1, width: "100%" }}>
-                  <div className="_comment_details" style={{ width: "100%" }}>
+                  <div
+                    className="_comment_details"
+                    style={{
+                      width: "100%",
+                      transition: "box-shadow .2s ease, background-color .2s ease",
+                      backgroundColor: jumpTarget && matchedCommentId === c.id ? "rgba(24, 144, 255, 0.06)" : undefined,
+                      boxShadow: jumpTarget && matchedCommentId === c.id ? "0 0 0 2px rgba(24, 144, 255, 0.15)" : undefined,
+                      borderRadius: jumpTarget && matchedCommentId === c.id ? "16px" : undefined,
+                      padding: jumpTarget && matchedCommentId === c.id ? "8px 10px" : undefined,
+                    }}
+                  >
                     <div className="_comment_details_top">
                       <div className="_comment_name">
                         <a href="#0">
@@ -282,11 +326,26 @@ export default function PostItem({ post, onLike, onComment, onCommentLike, onCom
                     {c.replies?.length > 0 && (
                       <div className="_replies_list" style={{ marginTop: "10px" }}>
                         {c.replies.map((reply: any) => (
-                          <div className="_comment_main" key={reply.id} style={{ marginBottom: "10px", padding: 0, marginTop: "10px" }}>
+                          <div
+                            id={`reply-${reply.id}`}
+                            className="_comment_main"
+                            key={reply.id}
+                            style={{ marginBottom: "10px", padding: 0, marginTop: "10px", scrollMarginTop: "120px" }}
+                          >
                             <div className="_comment_image">
                               <img src={reply.authorProfilePicture || "/assets/images/txt_img.png"} alt="" className="_comment_img1" style={{ borderRadius: "50%", objectFit: "cover", width: "24px", height: "24px" }} />
                             </div>
-                            <div className="_comment_area" style={{ flex: 1, width: "100%", padding: "8px 12px", borderRadius: "18px", backgroundColor: "#f0f2f5" }}>
+                            <div
+                              className="_comment_area"
+                              style={{
+                                flex: 1,
+                                width: "100%",
+                                padding: "8px 12px",
+                                borderRadius: "18px",
+                                backgroundColor: jumpTarget?.targetId === reply.id ? "rgba(24, 144, 255, 0.12)" : "#f0f2f5",
+                                boxShadow: jumpTarget?.targetId === reply.id ? "0 0 0 2px rgba(24, 144, 255, 0.15)" : undefined,
+                              }}
+                            >
                               <div className="_comment_details_top">
                                 <div className="_comment_name"><a href="#0"><h4 className="_comment_name_title" style={{ fontSize: "12px", margin: 0 }}>{reply.authorName}</h4></a></div>
                               </div>

@@ -246,7 +246,7 @@ router.post("/:id/comment", authenticate, async (req: AuthRequest, res) => {
           user_id: post.user_id,
           sender_id: userId,
           type: "comment",
-          target_id: postId,
+          target_id: id,
         });
 
         const io = req.app.get("io");
@@ -258,7 +258,7 @@ router.post("/:id/comment", authenticate, async (req: AuthRequest, res) => {
           user_id: post.user_id,
           sender_id: userId,
           type: "comment",
-          target_id: postId,
+          target_id: id,
           is_read: false,
           created_at: new Date(),
           senderName: `${sender?.first_name} ${sender?.last_name}`,
