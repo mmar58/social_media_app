@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { apiUrl, socketBaseUrl } from "../lib/api";
+import { requestJson } from "../lib/request";
 
 export interface User {
   id: number;
@@ -16,6 +17,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
+  socket: Socket | null;
   login: (token: string, user: User) => void;
   logout: () => void;
   loading: boolean;
@@ -53,25 +55,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const headers: Record<string, string> = {};
       if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
-      const res = await fetch(apiUrl("/api/auth/me"), {
+      const data = await requestJson<any>(apiUrl("/api/auth/me"), {
         headers,
         credentials: "include",
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        // persist refreshed token if backend provided one
-        if (data.token) {
-          localStorage.setItem("token", data.token);
-          setToken(data.token);
-        }
-        setUser(data.user);
-      } else {
-        // Invalid token
-        localStorage.removeItem("token");
-        setToken(null);
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        setToken(data.token);
       }
+      setUser(data.user);
     } catch (e) {
+      localStorage.removeItem("token");
+      setToken(null);
       console.error("Failed to fetch user", e);
     } finally {
       setLoading(false);
@@ -82,14 +78,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const t = authToken || token;
       if (!t) return;
-      const res = await fetch(apiUrl("/api/notifications"), {
+      const data = await requestJson<any>(apiUrl("/api/notifications"), {
         headers: { Authorization: `Bearer ${t}` },
+      }, {
+        dedupeKey: `notifications:${t}`,
+        cacheTtlMs: 3000,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications || []);
-        setUnread(data.unread || 0);
-      }
+      setNotifications(data.notifications || []);
+      setUnread(data.unread || 0);
     } catch (e) {
       console.error(e);
     }
@@ -171,7 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, token]);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading, notifications, unread, markAllRead, markRead }}>
+    <AuthContext.Provider value={{ user, token, socket, login, logout, loading, notifications, unread, markAllRead, markRead }}>
       {children}
     </AuthContext.Provider>
   );

@@ -33,13 +33,15 @@ Browser
 The main frontend files are:
 
 - `frontend/app/layout.tsx`: global layout, CSS imports, provider mounting.
-- `frontend/app/Providers.tsx`: wraps the app with the auth provider.
+- `frontend/app/Providers.tsx`: wraps the app with the auth and post providers.
 - `frontend/app/page.tsx`: redirects the root route to `/feed`.
 - `frontend/app/login/page.tsx`: login screen.
 - `frontend/app/register/page.tsx`: registration screen.
 - `frontend/app/feed/page.tsx`: authenticated feed screen.
 - `frontend/app/context/AuthContext.tsx`: user state, token state, notification state, and socket registration.
+- `frontend/app/context/PostContext.tsx`: shared feed state, post mutation handlers, comment pagination, and socket-driven post updates.
 - `frontend/app/lib/api.ts`: environment-aware API, socket, and media URL helpers.
+- `frontend/app/lib/request.ts`: shared request helper with GET deduplication, short-lived caching, and retry support.
 - `frontend/app/components/Header.tsx`: search, notification dropdown, and user menu.
 - `frontend/app/components/CreatePostBox.tsx`: post creation form.
 - `frontend/app/components/PostItem.tsx`: post card with likes, comments, replies, and jump targeting.
@@ -99,15 +101,16 @@ comments 1 --- * comments (reply chain via parent_id)
 
 1. `frontend/app/feed/page.tsx` checks auth state.
 2. If the user exists, it fetches `GET /api/posts?limit=20` and optionally a `cursor`.
-3. The backend returns posts with author metadata, batched like state, comment trees, and pagination metadata.
-4. The frontend renders the result using `PostItem` components.
+3. The backend returns posts with author metadata, batched like state, feed pagination metadata, and comment summary fields instead of full comment trees.
+4. `PostContext` stores those records as the shared source of truth for the feed and modal.
+5. `PostItem` loads `GET /api/posts/:id/comments` on demand and paginates comment threads separately.
 
 ### Post and interaction flow
 
 1. `CreatePostBox` submits `multipart/form-data` to `POST /api/posts`.
-2. `PostItem` triggers likes, comments, comment likes, and replies through dedicated mutation endpoints.
+2. `PostContext` triggers likes, comments, comment likes, and replies through dedicated mutation endpoints.
 3. Backend route handlers persist the mutation and return the minimal payload needed by the UI.
-4. The frontend emits socket events to update other active clients.
+4. The shared auth-owned socket emits realtime events to update other active clients.
 
 ### Notification flow
 
@@ -116,7 +119,8 @@ comments 1 --- * comments (reply chain via parent_id)
 3. `AuthContext` prepends the notification to local state and increments `unread`.
 4. The header renders the notification list and unread badge.
 5. Opening a notification marks it read and fetches `GET /api/notifications/:id/details`.
-6. The frontend displays the hydrated post in `NotificationPostModal`, scrolls to the relevant comment or reply, and keeps the modal live-synced while it is open.
+6. The header upserts the hydrated post into `PostContext`.
+7. `NotificationPostModal` reads the same shared post record as the feed, scrolls to the relevant comment or reply, and uses the same mutation handlers and socket updates.
 
 ## Current project structure by concern
 
@@ -124,23 +128,20 @@ comments 1 --- * comments (reply chain via parent_id)
 
 - Routing is page-based inside `frontend/app/`.
 - Session and notification state are centralized in `AuthContext`.
-- Feed state is local to `frontend/app/feed/page.tsx`.
-- Component composition is simple and direct; there is no global client-side data layer like React Query.
+- Post and comment state are centralized in `PostContext`.
+- Shared HTTP behavior for retries, cache invalidation, and request deduplication lives in `frontend/app/lib/request.ts`.
 
 ### API and business logic
 
 - Request validation is handled through reusable Zod middleware.
 - Notification creation is centralized in `backend/src/services/notificationService.ts`.
 - Feed and notification detail hydration share `backend/src/services/postHydration.ts`.
+- Feed hydration and comment-thread hydration are split so comment pagination can happen independently per post.
 
 ## Honest current limitations
 
 The codebase works as a functional product, but several implementation tradeoffs still favor simplicity over production-grade scale and security boundaries:
 
-- Feed reads still hydrate full comment trees for each loaded post instead of paginating comment threads separately.
-- Real-time events are broadcast-oriented and not scoped to authorized rooms per post or user.
-- The feed page and notification modal maintain separate Socket.IO connections and duplicated mutation handlers.
-- There is no shared client-side data layer for retries, cache invalidation, or request deduplication.
 - Uploads are stored on the local filesystem.
 - Socket registration is kept in process memory.
 - Schema evolution is still managed through `schema.sql` rather than formal migrations.

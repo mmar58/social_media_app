@@ -4,7 +4,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { mediaUrl } from "../lib/api";
 
-export default function PostItem({ post, jumpTarget, onLike, onComment, onCommentLike, onCommentReply, idPrefix = "" }: any) {
+export default function PostItem({
+  post,
+  jumpTarget,
+  onLike,
+  onComment,
+  onCommentLike,
+  onCommentReply,
+  onLoadComments,
+  onLoadMoreComments,
+  idPrefix = "",
+}: any) {
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
@@ -38,6 +48,14 @@ export default function PostItem({ post, jumpTarget, onLike, onComment, onCommen
     }
   }, [jumpTarget, matchedCommentId, post.id]);
 
+  useEffect(() => {
+    if (!showComments || post.commentsLoaded || post.commentsLoading || !onLoadComments) {
+      return;
+    }
+
+    onLoadComments(post.id).catch(() => undefined);
+  }, [onLoadComments, post.commentsLoaded, post.commentsLoading, post.id, showComments]);
+
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
@@ -54,6 +72,8 @@ export default function PostItem({ post, jumpTarget, onLike, onComment, onCommen
   };
 
   const withPrefix = (value: string) => (idPrefix ? `${idPrefix}-${value}` : value);
+  const commentCount = post.totalComments ?? post.comments?.length ?? 0;
+  const visibleComments = showAllComments ? (post.comments || []) : (post.comments || []).slice(0, 2);
 
   return (
     <div
@@ -135,7 +155,7 @@ export default function PostItem({ post, jumpTarget, onLike, onComment, onCommen
         <div className="_feed_inner_timeline_total_reacts_txt">
           <p className="_feed_inner_timeline_total_reacts_para1">
             <a href="#0" onClick={(e) => { e.preventDefault(); setShowComments(!showComments); }}>
-              <span>{post.comments?.length || 0}</span> Comment
+              <span>{commentCount}</span> Comment
             </a>
           </p>
           <p className="_feed_inner_timeline_total_reacts_para2"><span>0</span> Share</p>
@@ -226,16 +246,19 @@ export default function PostItem({ post, jumpTarget, onLike, onComment, onCommen
       </div>
 
       {/* Comments List */}
-      {showComments && post.comments?.length > 0 && (
+      {showComments && (
           <div className="_timline_comment_main">
             <div className="_previous_comment">
-              {!showAllComments && post.comments.length > 2 && (
+              {!showAllComments && (post.comments || []).length > 2 && (
                 <button type="button" className="_previous_comment_txt" onClick={() => setShowAllComments(true)}>
-                  View {post.comments.length - 2} previous comments
+                  View {(post.comments || []).length - 2} previous comments
                 </button>
               )}
             </div>
-            {(showAllComments ? post.comments : post.comments.slice(0, 2)).map((c: any) => (
+            {post.commentsLoading && (post.comments || []).length === 0 && (
+              <div className="_previous_comment_txt">Loading comments...</div>
+            )}
+            {visibleComments.map((c: any) => (
               <div
                 id={withPrefix(`comment-${c.id}`)}
                 className="_comment_main"
@@ -363,6 +386,19 @@ export default function PostItem({ post, jumpTarget, onLike, onComment, onCommen
                 </div>
               </div>
             ))}
+            {showComments && !post.commentsLoading && (post.comments || []).length === 0 && (
+              <div className="_previous_comment_txt">No comments yet.</div>
+            )}
+            {showComments && post.hasMoreComments && onLoadMoreComments && (
+              <button
+                type="button"
+                className="_previous_comment_txt"
+                onClick={() => onLoadMoreComments(post.id)}
+                disabled={post.commentsLoading}
+              >
+                {post.commentsLoading ? "Loading..." : "Load more comments"}
+              </button>
+            )}
           </div>
         )}
     </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { usePosts } from "../context/PostContext";
 import Header from "../components/Header";
 import CreatePostBox from "../components/CreatePostBox";
 import Loader from "../components/Loader";
@@ -10,19 +11,13 @@ import StoriesPlaceholder from "../components/StoriesPlaceholder";
 import LeftSidebar from "../components/LeftSidebar";
 import RightSidebar from "../components/RightSidebar";
 import { useRouter, useSearchParams } from "next/navigation";
-import { io, Socket } from "socket.io-client";
-import { apiUrl, socketBaseUrl } from "../lib/api";
 
 export default function FeedPage() {
-  const socketRef = useRef<Socket | null>(null);
   const { user, loading, token } = useAuth();
+  const { feedPosts, hasMorePosts, loadingFeed, loadingMorePosts, fetchFeed, loadMoreFeed, createPost, likePost, addComment, likeComment, replyToComment, loadPostComments, loadMorePostComments } = usePosts();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [posts, setPosts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [nextCursor, setNextCursor] = useState<number | null>(null);
-  const [hasMorePosts, setHasMorePosts] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [jumpHandled, setJumpHandled] = useState<string | null>(null);
 
@@ -43,302 +38,35 @@ export default function FeedPage() {
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
-    } else if (user && token) {
-      fetchPosts({ reset: true });
-      const socket = io(socketBaseUrl, { transports: ["websocket"], withCredentials: true });
-      socketRef.current = socket;
-
-      socket.on("receive_post", (newPost) => {
-        setPosts((prev) => [newPost, ...prev]);
-      });
-      socket.on("update_likes", ({ postId, action }) => {
-        setPosts((prev) =>
-          prev.map((p) => {
-            if (p.id === Number(postId)) {
-              return { ...p, likes: action === "liked" ? p.likes + 1 : p.likes - 1 };
-            }
-            return p;
-          })
-        );
-      });
-      socket.on("receive_comment", ({ postId, comment }) => {
-        setPosts((prev) =>
-          prev.map((p) => {
-            if (p.id === Number(postId)) {
-              const alreadyExists = (p.comments || []).some((c: any) => c.id === comment.id);
-              if (alreadyExists) return p;
-              return { ...p, comments: [comment, ...(p.comments || [])] };
-            }
-            return p;
-          })
-        );
-      });
-      socket.on("update_comment_likes", ({ postId, commentId, action }) => {
-        setPosts((prev) =>
-          prev.map((p) => {
-            if (p.id !== Number(postId)) {
-              return p;
-            }
-
-            return {
-              ...p,
-              comments: (p.comments || []).map((comment: any) => {
-                if (comment.id !== Number(commentId)) {
-                  return comment;
-                }
-
-                const currentLikes = Number(comment.likes) || 0;
-                return {
-                  ...comment,
-                  likes: action === "liked" ? currentLikes + 1 : Math.max(0, currentLikes - 1),
-                };
-              }),
-            };
-          })
-        );
-      });
-      socket.on("receive_reply", ({ postId, commentId, reply }) => {
-        setPosts((prev) =>
-          prev.map((p) => {
-            if (p.id !== Number(postId)) {
-              return p;
-            }
-
-            return {
-              ...p,
-              comments: (p.comments || []).map((comment: any) => {
-                if (comment.id !== Number(commentId)) {
-                  return comment;
-                }
-
-                const alreadyExists = (comment.replies || []).some((existingReply: any) => existingReply.id === reply.id);
-                if (alreadyExists) {
-                  return comment;
-                }
-
-                return {
-                  ...comment,
-                  replies: [reply, ...(comment.replies || [])],
-                };
-              }),
-            };
-          })
-        );
-      });
-
-      return () => {
-        socket.disconnect();
-      };
     }
-  }, [user, loading, router, token]);
+  }, [loading, router, user]);
 
-  const fetchPosts = useCallback(
-    async ({ search, cursor, reset = false }: { search?: string; cursor?: number | null; reset?: boolean }) => {
-      try {
-        const params = new URLSearchParams();
-        if (search?.trim()) params.set("search", search);
-        if (cursor) params.set("cursor", String(cursor));
-        params.set("limit", "20");
-        const res = await fetch(apiUrl(`/api/posts?${params.toString()}`), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (res.ok) {
-          const mappedPosts = data.posts.map((p: any) => ({
-            ...p,
-            comments: (p.comments || []).slice().sort((a: any, b: any) => {
-              const ta = a.created_at ? new Date(a.created_at).getTime() : a.id || 0;
-              const tb = b.created_at ? new Date(b.created_at).getTime() : b.id || 0;
-              return tb - ta;
-            }),
-          }));
-
-          setNextCursor(data.nextCursor ?? null);
-          setHasMorePosts(Boolean(data.hasMore));
-          setPosts((current) => (reset ? mappedPosts : [...current, ...mappedPosts]));
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    },
-    [token]
-  );
+  useEffect(() => {
+    if (!user || !token) return;
+    fetchFeed({ search: searchQuery, reset: true }).catch((error) => console.error(error));
+  }, [fetchFeed, searchQuery, token, user]);
 
   const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setJumpHandled(null);
-    // Debounce search
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      fetchPosts({ search: query, reset: true });
+      setSearchQuery(query);
+      setJumpHandled(null);
     }, 400);
   };
 
   const handleLoadMore = async () => {
-    if (!hasMorePosts || !nextCursor || loadingMore) return;
-
-    setLoadingMore(true);
-    try {
-      await fetchPosts({ search: searchQuery, cursor: nextCursor, reset: false });
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  const handlePost = async (content: string, visibility: string, image?: File) => {
-    try {
-      const formData = new FormData();
-      formData.append("content", content);
-      formData.append("visibility", visibility);
-      if (image) formData.append("image", image);
-
-      const res = await fetch(apiUrl("/api/posts"), {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      if (res.ok) {
-        const { post } = await res.json();
-        setPosts((prev) => [post, ...prev]);
-        if (post.visibility === "public") {
-          socketRef.current?.emit("new_post", post);
-        }
-      }
-    } catch (err) {}
-  };
-
-  const handleLike = async (id: number) => {
-    try {
-      const res = await fetch(apiUrl(`/api/posts/${id}/like`), {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setPosts((prev) =>
-          prev.map((p) => {
-            if (p.id === id) {
-              let updatedLikers = [...(p.likers || [])];
-              if (data.action === "liked") {
-                const newLiker = {
-                  userId: data.likerUserId,
-                  profile_picture: data.likerProfilePicture,
-                  name: data.likerName,
-                };
-                updatedLikers = [newLiker, ...updatedLikers.filter((l: any) => l.userId !== data.likerUserId)].slice(0, 8);
-              } else {
-                updatedLikers = updatedLikers.filter((l: any) => l.userId !== data.likerUserId);
-              }
-              return {
-                ...p,
-                isLiked: data.action === "liked",
-                likes: data.action === "liked" ? p.likes + 1 : p.likes - 1,
-                likers: updatedLikers,
-              };
-            }
-            return p;
-          })
-        );
-        socketRef.current?.emit("like_post", { postId: id, action: data.action });
-      }
-    } catch (err) {}
-  };
-
-  const handleComment = async (postId: number, content: string) => {
-    try {
-      const res = await fetch(apiUrl(`/api/posts/${postId}/comment`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ content }),
-      });
-      if (res.ok) {
-        const { comment } = await res.json();
-        setPosts((prev) =>
-          prev.map((p) => {
-            if (p.id === postId) {
-              return { ...p, comments: [comment, ...(p.comments || [])] };
-            }
-            return p;
-          })
-        );
-        socketRef.current?.emit("new_comment", { postId, comment });
-      }
-    } catch (err) {}
-  };
-
-  const handleCommentLike = async (postId: number, commentId: number) => {
-    try {
-      const res = await fetch(apiUrl(`/api/posts/${postId}/comments/${commentId}/like`), {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setPosts((prev) =>
-          prev.map((p) => {
-            if (p.id === postId) {
-              return {
-                ...p,
-                comments: (p.comments || []).map((c: any) => {
-                  if (c.id === commentId) {
-                    const currentLikes = Number(c.likes) || 0;
-                    return {
-                      ...c,
-                      isLiked: data.action === "liked",
-                      likes: data.action === "liked" ? currentLikes + 1 : Math.max(0, currentLikes - 1),
-                    };
-                  }
-                  return c;
-                }),
-              };
-            }
-            return p;
-          })
-        );
-        socketRef.current?.emit("like_comment", { postId, commentId, action: data.action });
-      }
-    } catch (err) {}
-  };
-
-  const handleCommentReply = async (postId: number, commentId: number, content: string) => {
-    try {
-      const res = await fetch(apiUrl(`/api/posts/${postId}/comments/${commentId}/reply`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ content }),
-      });
-      if (res.ok) {
-        const { reply } = await res.json();
-        setPosts((prev) =>
-          prev.map((p) => {
-            if (p.id === postId) {
-              return {
-                ...p,
-                comments: p.comments.map((c: any) => {
-                    if (c.id === commentId) {
-                    return { ...c, replies: [reply, ...(c.replies || [])] };
-                  }
-                  return c;
-                }),
-              };
-            }
-            return p;
-          })
-        );
-        socketRef.current?.emit("reply_comment", { postId, commentId, reply });
-      }
-    } catch (err) {}
+    await loadMoreFeed(searchQuery);
   };
 
   useEffect(() => {
-    if (!jumpTarget || !posts.length || jumpHandled === jumpParam) return;
+    if (!jumpTarget || !feedPosts.length || jumpHandled === jumpParam) return;
 
     const getTargetElementId = () => {
       if (jumpTarget.type === "like_post") {
         return `post-${jumpTarget.targetId}`;
       }
 
-      for (const post of posts) {
+      for (const post of feedPosts) {
         const topLevelComment = (post.comments || []).find((comment: any) => comment.id === jumpTarget.targetId);
         if (topLevelComment) {
           return `comment-${jumpTarget.targetId}`;
@@ -374,9 +102,9 @@ export default function FeedPage() {
     }, 250);
 
     return () => window.clearTimeout(timeoutId);
-  }, [jumpHandled, jumpParam, jumpTarget, posts]);
+  }, [feedPosts, jumpHandled, jumpParam, jumpTarget]);
 
-  if (loading || !user) {
+  if (loading || !user || loadingFeed) {
     return <Loader />;
   }
 
@@ -388,34 +116,31 @@ export default function FeedPage() {
           <div className="container _custom_container">
             <div className="_layout_inner_wrap">
               <div className="row">
-                {/* Left Sidebar - Sticky */}
                 <div className="col-xl-3 col-lg-3 col-md-12 col-sm-12">
                   <div className="_sidebar_sticky">
                     <LeftSidebar />
                   </div>
                 </div>
 
-                {/* Middle Column - Scrollable */}
                 <div className="col-xl-6 col-lg-6 col-md-12 col-sm-12">
                   <div className="_layout_middle_wrap">
                     <div className="_layout_middle_inner">
-                      {/* Stories */}
                       <StoriesPlaceholder />
 
-                      {/* Create Post */}
-                      <CreatePostBox onPost={handlePost} />
+                      <CreatePostBox onPost={createPost} />
 
-                      {/* Posts */}
                       <div className="posts-container">
-                        {posts.map((post) => (
+                        {feedPosts.map((post) => (
                           <PostItem
                             key={post.id}
                             post={post}
                             jumpTarget={jumpTarget}
-                            onLike={handleLike}
-                            onComment={handleComment}
-                            onCommentLike={handleCommentLike}
-                            onCommentReply={handleCommentReply}
+                            onLike={likePost}
+                            onComment={addComment}
+                            onCommentLike={likeComment}
+                            onCommentReply={replyToComment}
+                            onLoadComments={loadPostComments}
+                            onLoadMoreComments={loadMorePostComments}
                           />
                         ))}
                       </div>
@@ -425,10 +150,10 @@ export default function FeedPage() {
                             type="button"
                             className="_feed_inner_text_area_btn_link"
                             onClick={handleLoadMore}
-                            disabled={loadingMore}
-                            style={{ minWidth: "180px", opacity: loadingMore ? 0.7 : 1 }}
+                            disabled={loadingMorePosts}
+                            style={{ minWidth: "180px", opacity: loadingMorePosts ? 0.7 : 1 }}
                           >
-                            {loadingMore ? "Loading..." : "Load more posts"}
+                            {loadingMorePosts ? "Loading..." : "Load more posts"}
                           </button>
                         </div>
                       )}
@@ -436,7 +161,6 @@ export default function FeedPage() {
                   </div>
                 </div>
 
-                {/* Right Sidebar - Sticky */}
                 <div className="col-xl-3 col-lg-3 col-md-12 col-sm-12">
                   <div className="_sidebar_sticky">
                     <RightSidebar />

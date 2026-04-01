@@ -3,8 +3,10 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
+import { usePosts } from "../context/PostContext";
 import NotificationPostModal from "./NotificationPostModal";
 import { apiUrl } from "../lib/api";
+import { requestJson } from "../lib/request";
 
 interface HeaderProps {
   searchQuery?: string;
@@ -13,6 +15,7 @@ interface HeaderProps {
 
 export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
   const { user, token, logout, notifications, unread, markAllRead, markRead } = useAuth();
+  const { upsertPost } = usePosts();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [notifyMenuOpen, setNotifyMenuOpen] = useState(false);
@@ -73,15 +76,13 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
 
     try {
       await markRead(notificationId);
-      const response = await fetch(apiUrl(`/api/notifications/${notificationId}/details`), {
+      const data = await requestJson<any>(apiUrl(`/api/notifications/${notificationId}/details`), {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to load notification details");
+      if (data.post) {
+        upsertPost(data.post);
       }
-
       setPreviewData(data);
       setNotifyOpen(false);
       setNotifyMenuOpen(false);

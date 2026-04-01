@@ -5,10 +5,11 @@ import fs from "fs";
 import db from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { createNotification } from "../services/notificationService";
-import { hydratePosts } from "../services/postHydration";
+import { hydrateFeedPosts, hydratePostComments, hydratePosts } from "../services/postHydration";
 import { validateBody, validateParams, validateQuery } from "../validation";
 import {
   commentParamsSchema,
+  commentsPageQuerySchema,
   commentPayloadSchema,
   createPostSchema,
   feedQuerySchema,
@@ -78,12 +79,35 @@ router.get("/", authenticate, validateQuery(feedQuerySchema), async (req: AuthRe
     const rawPosts = await query.orderBy("posts.id", "desc").limit(limit + 1);
     const hasMore = rawPosts.length > limit;
     const page = rawPosts.slice(0, limit);
-    const posts = await hydratePosts(page, userId);
+    const posts = await hydrateFeedPosts(page, userId);
     const nextCursor = hasMore ? page[page.length - 1]?.id ?? null : null;
 
     res.json({ posts, nextCursor, hasMore });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/:id/comments", authenticate, validateParams(postIdParamsSchema), validateQuery(commentsPageQuerySchema), async (req: AuthRequest, res) => {
+  try {
+    const postId = Number(req.params.id);
+    const userId = req.user.id;
+    const cursor = req.query.cursor ? Number(req.query.cursor) : null;
+    const limit = Number(req.query.limit) || 10;
+
+    const post = await db("posts").where({ id: postId }).first();
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    if (post.visibility !== "public" && post.user_id !== userId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const page = await hydratePostComments(postId, userId, { cursor, limit });
+    return res.json(page);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
   }
 });
 

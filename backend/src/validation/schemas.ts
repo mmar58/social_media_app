@@ -22,6 +22,11 @@ export const feedQuerySchema = z.object({
   cursor: z.coerce.number().int().positive("Cursor must be a positive integer").optional(),
 });
 
+export const commentsPageQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1, "Limit must be at least 1").max(20, "Limit cannot exceed 20").optional().default(10),
+  cursor: z.coerce.number().int().positive("Cursor must be a positive integer").optional(),
+});
+
 export const createPostSchema = z.object({
   content: z.string().trim().max(2000, "Post content cannot exceed 2000 characters").optional().default(""),
   visibility: z.enum(["public", "private"]).optional().default("public"),
