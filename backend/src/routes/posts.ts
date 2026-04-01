@@ -366,7 +366,7 @@ router.post("/:id/comments/:commentId/reply", authenticate, async (req: AuthRequ
           user_id: parent.user_id,
           sender_id: userId,
           type: 'reply',
-          target_id: parentId,
+          target_id: id,
         });
 
         const io = req.app.get("io");
@@ -378,7 +378,7 @@ router.post("/:id/comments/:commentId/reply", authenticate, async (req: AuthRequ
           user_id: parent.user_id,
           sender_id: userId,
           type: 'reply',
-          target_id: parentId,
+          target_id: id,
           is_read: false,
           created_at: new Date(),
           senderName: `${sender?.first_name} ${sender?.last_name}`,
