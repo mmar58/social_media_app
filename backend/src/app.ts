@@ -9,13 +9,14 @@ import postRoutes from "./routes/posts";
 
 export function createApp() {
   const app = express();
-  app.use(cors());
+  const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
+  app.use(cors({ origin: frontendOrigin, credentials: true }));
   app.use(express.json());
   app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
   const server = http.createServer(app);
   const io = new Server(server, {
-    cors: { origin: "*" },
+    cors: { origin: frontendOrigin, credentials: true },
   });
 
   app.use("/api/auth", authRoutes);

@@ -41,7 +41,7 @@ export default function FeedPage() {
       router.push("/login");
     } else if (user && token) {
       fetchPosts();
-      const socket = io("http://localhost:5000", { transports: ["websocket"] });
+      const socket = io("http://localhost:5000", { transports: ["websocket"], withCredentials: true });
       socketRef.current = socket;
 
       socket.on("receive_post", (newPost) => {

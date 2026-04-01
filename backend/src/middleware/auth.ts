@@ -5,8 +5,22 @@ export interface AuthRequest extends Request {
   user?: any;
 }
 
+function parseCookie(req: Request, name: string) {
+  const cookie = req.headers.cookie;
+  if (!cookie) return null;
+  const parts = cookie.split(";").map((c) => c.trim());
+  for (const p of parts) {
+    if (p.startsWith(name + "=")) return decodeURIComponent(p.split("=").slice(1).join("="));
+  }
+  return null;
+}
+
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const token = req.header("Authorization")?.replace("Bearer ", "");
+  let token = req.header("Authorization")?.replace("Bearer ", "");
+  if (!token) {
+    token = parseCookie(req, "token") || undefined;
+  }
+
   if (!token) return res.status(401).json({ message: "No token provided" });
 
   try {

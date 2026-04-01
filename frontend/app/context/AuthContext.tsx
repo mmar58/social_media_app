@@ -42,19 +42,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(storedToken);
       fetchUser(storedToken);
     } else {
-      setLoading(false);
+      // try cookie-based auth if available (httpOnly cookie)
+      fetchUser();
     }
   }, []);
 
-  const fetchUser = async (authToken: string) => {
+  const fetchUser = async (authToken?: string) => {
     try {
+      const headers: Record<string, string> = {};
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
       const res = await fetch("http://localhost:5000/api/auth/me", {
-        headers: {
-          Authorization: `Bearer ${authToken}`
-        }
+        headers,
+        credentials: "include",
       });
+
       if (res.ok) {
         const data = await res.json();
+        // persist refreshed token if backend provided one
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          setToken(data.token);
+        }
         setUser(data.user);
       } else {
         // Invalid token
@@ -93,6 +102,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    // try to clear server-side cookie as well
+    try {
+      fetch("http://localhost:5000/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
+    } catch (e) {}
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
