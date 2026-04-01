@@ -73,6 +73,58 @@ export default function FeedPage() {
           })
         );
       });
+      socket.on("update_comment_likes", ({ postId, commentId, action }) => {
+        setPosts((prev) =>
+          prev.map((p) => {
+            if (p.id !== Number(postId)) {
+              return p;
+            }
+
+            return {
+              ...p,
+              comments: (p.comments || []).map((comment: any) => {
+                if (comment.id !== Number(commentId)) {
+                  return comment;
+                }
+
+                const currentLikes = Number(comment.likes) || 0;
+                return {
+                  ...comment,
+                  likes: action === "liked" ? currentLikes + 1 : Math.max(0, currentLikes - 1),
+                };
+              }),
+            };
+          })
+        );
+      });
+      socket.on("receive_reply", ({ postId, commentId, reply }) => {
+        setPosts((prev) =>
+          prev.map((p) => {
+            if (p.id !== Number(postId)) {
+              return p;
+            }
+
+            return {
+              ...p,
+              comments: (p.comments || []).map((comment: any) => {
+                if (comment.id !== Number(commentId)) {
+                  return comment;
+                }
+
+                const alreadyExists = (comment.replies || []).some((existingReply: any) => existingReply.id === reply.id);
+                if (alreadyExists) {
+                  return comment;
+                }
+
+                return {
+                  ...comment,
+                  replies: [reply, ...(comment.replies || [])],
+                };
+              }),
+            };
+          })
+        );
+      });
 
       return () => {
         socket.disconnect();
@@ -147,7 +199,7 @@ export default function FeedPage() {
       });
       if (res.ok) {
         const { post } = await res.json();
-        setPosts([post, ...posts]);
+        setPosts((prev) => [post, ...prev]);
         if (post.visibility === "public") {
           socketRef.current?.emit("new_post", post);
         }
@@ -163,8 +215,8 @@ export default function FeedPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setPosts(
-          posts.map((p) => {
+        setPosts((prev) =>
+          prev.map((p) => {
             if (p.id === id) {
               let updatedLikers = [...(p.likers || [])];
               if (data.action === "liked") {
@@ -201,8 +253,8 @@ export default function FeedPage() {
       });
       if (res.ok) {
         const { comment } = await res.json();
-        setPosts(
-          posts.map((p) => {
+        setPosts((prev) =>
+          prev.map((p) => {
             if (p.id === postId) {
               return { ...p, comments: [comment, ...(p.comments || [])] };
             }
@@ -227,12 +279,13 @@ export default function FeedPage() {
             if (p.id === postId) {
               return {
                 ...p,
-                comments: p.comments.map((c: any) => {
+                comments: (p.comments || []).map((c: any) => {
                   if (c.id === commentId) {
+                    const currentLikes = Number(c.likes) || 0;
                     return {
                       ...c,
                       isLiked: data.action === "liked",
-                      likes: data.action === "liked" ? c.likes + 1 : c.likes - 1,
+                      likes: data.action === "liked" ? currentLikes + 1 : Math.max(0, currentLikes - 1),
                     };
                   }
                   return c;
@@ -242,6 +295,7 @@ export default function FeedPage() {
             return p;
           })
         );
+        socketRef.current?.emit("like_comment", { postId, commentId, action: data.action });
       }
     } catch (err) {}
   };
@@ -271,6 +325,7 @@ export default function FeedPage() {
             return p;
           })
         );
+        socketRef.current?.emit("reply_comment", { postId, commentId, reply });
       }
     } catch (err) {}
   };

@@ -44,6 +44,14 @@ export function createApp() {
       socket.broadcast.emit("receive_comment", data);
     });
 
+    socket.on("like_comment", (data) => {
+      socket.broadcast.emit("update_comment_likes", data);
+    });
+
+    socket.on("reply_comment", (data) => {
+      socket.broadcast.emit("receive_reply", data);
+    });
+
     socket.on("disconnect", () => {
       for (const [userId, socketIds] of socketMap.entries()) {
         if (socketIds.has(socket.id)) {

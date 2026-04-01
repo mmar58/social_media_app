@@ -179,6 +179,9 @@ router.post("/:id/comment", authenticate, validateParams(postIdParamsSchema), va
 
     comment.authorName = `${comment.first_name} ${comment.last_name}`;
     comment.authorProfilePicture = comment.profile_picture;
+    comment.likes = 0;
+    comment.isLiked = false;
+    comment.replies = [];
 
     const post = await db("posts").where({ id: postId }).first();
     if (post) {
