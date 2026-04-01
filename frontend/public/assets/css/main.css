@@ -102,7 +102,7 @@
     -webkit-box-flex: 1;
     -ms-flex: 1 1;
     flex: 1 1;
-    padding: 18px 0 0 0;
+    padding: 0;
 }
 
 ._layout_middle_wrap {
@@ -135,7 +135,7 @@
     -webkit-box-flex: 1;
     -ms-flex: 1 1;
     flex: 1 1;
-    padding: 18px 0 0 0;
+    padding: 0;
 }
 
 ._layout_right_sidebar_inner {
@@ -183,7 +183,7 @@
     -webkit-box-flex: 1;
     -ms-flex: 1 1;
     flex: 1 1;
-    padding: 8px 0 0;
+    padding: 10px 0 0;
 }
 
 ._scrool_not_sidebar_wrap {
@@ -1198,7 +1198,7 @@
 
 ._left_inner_area_suggest_info_para {
     font-weight: 300;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.4;
     color: var(--color6);
 }
@@ -1618,7 +1618,7 @@
 
 ._feed_right_inner_area_card_ppl_para {
     font-weight: 300;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.4;
     color: var(--color6);
 }

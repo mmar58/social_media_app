@@ -1,12 +1,12 @@
 /* Global CSS overrides */
 @media (min-width: 1400px) {
   .container._custom_container {
-    max-width: 1500px !important;
+    max-width: 1400px !important;
   }
 }
 
 body {
-  zoom: .99;
+  zoom: 1.05;
   /* Increase the size of all items universally to fix the zoomed-out look */
 }
 

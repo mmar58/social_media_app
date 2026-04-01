@@ -129,10 +129,10 @@ export default function LeftSidebar() {
             <a href="#0" className="_left_inner_event_link">See all</a>
           </div>
           {[1, 2].map((_, i) => (
-            <a className="_left_inner_event_card_link" href="#0" key={i}>
+            <div className="_left_inner_event_card_link" key={i}>
               <div className="_left_inner_event_card">
                 <div className="_left_inner_event_card_iamge">
-                  <img src="/assets/images/feed_event1.png" alt="Event" className="_card_img" />
+                  <a href="#0"><img src="/assets/images/feed_event1.png" alt="Event" className="_card_img" /></a>
                 </div>
                 <div className="_left_inner_event_card_content">
                   <div className="_left_inner_card_date">
@@ -140,16 +140,16 @@ export default function LeftSidebar() {
                     <p className="_left_inner_card_date_para1">Jul</p>
                   </div>
                   <div className="_left_inner_card_txt">
-                    <h4 className="_left_inner_event_card_title">No more terrorism no more cry</h4>
+                    <a href="#0"><h4 className="_left_inner_event_card_title">No more terrorism no more cry</h4></a>
                   </div>
                 </div>
                 <hr className="_underline" />
                 <div className="_left_inner_event_bottom">
                   <p className="_left_iner_event_bottom">17 People Going</p>
-                  <a href="#0" className="_left_iner_event_bottom_link">Going</a>
+                  <a href="#0" className="_left_inner_event_bottom_link">Going</a>
                 </div>
               </div>
-            </a>
+            </div>
           ))}
         </div>
       </div>
