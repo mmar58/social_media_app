@@ -282,21 +282,29 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
               </ul>
 
               {/* Profile Dropdown */}
-              <div className="_header_nav_profile" style={{ cursor: "pointer", position: "relative" }} onClick={() => setDropdownOpen(!dropdownOpen)}>
-                <div className="_header_nav_profile_image">
-                  <img src={user.profile_picture || "/assets/images/profile.png"} alt="Profile" className="_nav_profile_img" style={{ borderRadius: "50%", objectFit: "cover" }} />
-                </div>
-                <div className="_header_nav_dropdown">
-                  <p className="_header_nav_para">{user.first_name} {user.last_name}</p>
-                  <button className="_header_nav_dropdown_btn _dropdown_toggle" type="button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" fill="none" viewBox="0 0 10 6">
-                      <path fill="#112032" d="M5 5l.354.354L5 5.707l-.354-.353L5 5zm4.354-3.646l-4 4-.708-.708 4-4 .708.708zm-4.708 4l-4-4 .708-.708 4 4-.708.708z" />
-                    </svg>
-                  </button>
-                </div>
+              <div className="_header_nav_profile" style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen((open) => !open)}
+                  aria-expanded={dropdownOpen}
+                  aria-haspopup="menu"
+                  style={{ cursor: "pointer", border: "none", background: "transparent", padding: 0, display: "flex", alignItems: "center" }}
+                >
+                  <div className="_header_nav_profile_image">
+                    <img src={user.profile_picture || "/assets/images/profile.png"} alt="Profile" className="_nav_profile_img" style={{ borderRadius: "50%", objectFit: "cover" }} />
+                  </div>
+                  <div className="_header_nav_dropdown">
+                    <p className="_header_nav_para">{user.first_name} {user.last_name}</p>
+                    <span className="_header_nav_dropdown_btn _dropdown_toggle">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" fill="none" viewBox="0 0 10 6">
+                        <path fill="#112032" d="M5 5l.354.354L5 5.707l-.354-.353L5 5zm4.354-3.646l-4 4-.708-.708 4-4 .708.708zm-4.708 4l-4-4 .708-.708 4 4-.708.708z" />
+                      </svg>
+                    </span>
+                  </div>
+                </button>
 
                 {dropdownOpen && (
-                  <div className="_nav_profile_dropdown _profile_dropdown" style={{ display: "block", right: 0, position: "absolute", top: "100%", zIndex: 99 }}>
+                  <div className="_nav_profile_dropdown _profile_dropdown show" style={{ display: "block", right: 0, position: "absolute", top: "100%", zIndex: 99 }}>
                     <div className="_nav_profile_dropdown_info">
                       <div className="_nav_profile_dropdown_image">
                         <img src={user.profile_picture || "/assets/images/profile.png"} alt="Profile" className="_nav_drop_img" style={{ borderRadius: "50%", objectFit: "cover" }} />
@@ -309,7 +317,15 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
                     <hr />
                     <ul className="_nav_dropdown_list">
                       <li className="_nav_dropdown_list_item">
-                        <a href="#0" className="_nav_dropdown_link" onClick={(e) => { e.preventDefault(); logout(); }}>
+                        <button
+                          type="button"
+                          className="_nav_dropdown_link"
+                          onClick={() => {
+                            setDropdownOpen(false);
+                            logout();
+                          }}
+                          style={{ border: "none", background: "transparent", width: "100%", padding: 0, textAlign: "left" }}
+                        >
                           <div className="_nav_drop_info">
                             <span>
                               <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" fill="none" viewBox="0 0 19 19">
@@ -318,7 +334,7 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
                             </span>
                             Log Out
                           </div>
-                        </a>
+                        </button>
                       </li>
                     </ul>
                   </div>
