@@ -47,7 +47,7 @@ export default function FeedPage() {
             if (p.id === Number(postId)) {
               const alreadyExists = (p.comments || []).some((c: any) => c.id === comment.id);
               if (alreadyExists) return p;
-              return { ...p, comments: [...(p.comments || []), comment] };
+              return { ...p, comments: [comment, ...(p.comments || [])] };
             }
             return p;
           })
@@ -70,7 +70,16 @@ export default function FeedPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        if (res.ok) setPosts(data.posts);
+        if (res.ok) setPosts(
+          data.posts.map((p: any) => ({
+            ...p,
+            comments: (p.comments || []).slice().sort((a: any, b: any) => {
+              const ta = a.created_at ? new Date(a.created_at).getTime() : a.id || 0;
+              const tb = b.created_at ? new Date(b.created_at).getTime() : b.id || 0;
+              return tb - ta;
+            }),
+          }))
+        );
       } catch (err) {
         console.error(err);
       }
@@ -156,7 +165,7 @@ export default function FeedPage() {
         setPosts(
           posts.map((p) => {
             if (p.id === postId) {
-              return { ...p, comments: [...(p.comments || []), comment] };
+              return { ...p, comments: [comment, ...(p.comments || [])] };
             }
             return p;
           })
@@ -213,8 +222,8 @@ export default function FeedPage() {
               return {
                 ...p,
                 comments: p.comments.map((c: any) => {
-                  if (c.id === commentId) {
-                    return { ...c, replies: [...(c.replies || []), reply] };
+                    if (c.id === commentId) {
+                    return { ...c, replies: [reply, ...(c.replies || [])] };
                   }
                   return c;
                 }),

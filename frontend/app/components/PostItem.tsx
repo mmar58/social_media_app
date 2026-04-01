@@ -203,7 +203,7 @@ export default function PostItem({ post, onLike, onComment, onCommentLike, onCom
                 </button>
               )}
             </div>
-            {(showAllComments ? post.comments : post.comments.slice(-2)).map((c: any) => (
+            {(showAllComments ? post.comments : post.comments.slice(0, 2)).map((c: any) => (
               <div className="_comment_main" key={c.id}>
                 <div className="_comment_image">
                   <a href="#0" className="_comment_image_link">
