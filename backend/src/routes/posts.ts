@@ -170,6 +170,40 @@ router.post("/:id/like", authenticate, async (req: AuthRequest, res) => {
       res.json({ action: "unliked", likerProfilePicture: null, likerUserId: userId });
     } else {
       await db("likes").insert({ user_id: userId, target_type: "post", target_id: postId });
+
+      // notify post owner
+      try {
+        const post = await db("posts").where({ id: postId }).first();
+        if (post && post.user_id !== userId) {
+          const [nid] = await db("notifications").insert({
+            user_id: post.user_id,
+            sender_id: userId,
+            type: "like_post",
+            target_id: postId,
+          });
+
+          const io = req.app.get("io");
+          const socketMap: Map<number, string> = req.app.get("socketMap");
+          const socketId = socketMap.get(post.user_id);
+          const sender = await db("users").select("first_name", "last_name", "profile_picture").where({ id: userId }).first();
+          const notification = {
+            id: nid,
+            user_id: post.user_id,
+            sender_id: userId,
+            type: "like_post",
+            target_id: postId,
+            is_read: false,
+            created_at: new Date(),
+            senderName: `${sender?.first_name} ${sender?.last_name}`,
+            senderProfile: sender?.profile_picture || null,
+          };
+          if (socketId) io.to(socketId).emit("notification", notification);
+          else io.emit("notification", notification);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+
       const liker = await db("users").select("profile_picture", "first_name", "last_name").where({ id: userId }).first();
       res.json({
         action: "liked",
@@ -204,6 +238,39 @@ router.post("/:id/comment", authenticate, async (req: AuthRequest, res) => {
     comment.authorName = `${comment.first_name} ${comment.last_name}`;
     comment.authorProfilePicture = comment.profile_picture;
 
+    // notify post owner
+    try {
+      const post = await db("posts").where({ id: postId }).first();
+      if (post && post.user_id !== userId) {
+        const [nid] = await db("notifications").insert({
+          user_id: post.user_id,
+          sender_id: userId,
+          type: "comment",
+          target_id: postId,
+        });
+
+        const io = req.app.get("io");
+        const socketMap: Map<number, string> = req.app.get("socketMap");
+        const socketId = socketMap.get(post.user_id);
+        const sender = await db("users").select("first_name", "last_name", "profile_picture").where({ id: userId }).first();
+        const notification = {
+          id: nid,
+          user_id: post.user_id,
+          sender_id: userId,
+          type: "comment",
+          target_id: postId,
+          is_read: false,
+          created_at: new Date(),
+          senderName: `${sender?.first_name} ${sender?.last_name}`,
+          senderProfile: sender?.profile_picture || null,
+        };
+        if (socketId) io.to(socketId).emit("notification", notification);
+        else io.emit("notification", notification);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
     res.json({ comment });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -224,6 +291,40 @@ router.post("/:id/comments/:commentId/like", authenticate, async (req: AuthReque
       res.json({ action: "unliked", likerUserId: userId });
     } else {
       await db("likes").insert({ user_id: userId, target_type: "comment", target_id: commentId });
+
+      // notify comment owner
+      try {
+        const comment = await db("comments").where({ id: commentId }).first();
+        if (comment && comment.user_id !== userId) {
+          const [nid] = await db("notifications").insert({
+            user_id: comment.user_id,
+            sender_id: userId,
+            type: "like_comment",
+            target_id: commentId,
+          });
+
+          const io = req.app.get("io");
+          const socketMap: Map<number, string> = req.app.get("socketMap");
+          const socketId = socketMap.get(comment.user_id);
+          const sender = await db("users").select("first_name", "last_name", "profile_picture").where({ id: userId }).first();
+          const notification = {
+            id: nid,
+            user_id: comment.user_id,
+            sender_id: userId,
+            type: "like_comment",
+            target_id: commentId,
+            is_read: false,
+            created_at: new Date(),
+            senderName: `${sender?.first_name} ${sender?.last_name}`,
+            senderProfile: sender?.profile_picture || null,
+          };
+          if (socketId) io.to(socketId).emit("notification", notification);
+          else io.emit("notification", notification);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+
       res.json({ action: "liked", likerUserId: userId });
     }
   } catch (err: any) {
@@ -256,6 +357,39 @@ router.post("/:id/comments/:commentId/reply", authenticate, async (req: AuthRequ
     reply.likes = 0;
     reply.isLiked = false;
     reply.replies = [];
+
+    // notify parent comment owner
+    try {
+      const parent = await db('comments').where({ id: parentId }).first();
+      if (parent && parent.user_id !== userId) {
+        const [nid] = await db('notifications').insert({
+          user_id: parent.user_id,
+          sender_id: userId,
+          type: 'reply',
+          target_id: parentId,
+        });
+
+        const io = req.app.get("io");
+        const socketMap: Map<number, string> = req.app.get("socketMap");
+        const socketId = socketMap.get(parent.user_id);
+        const sender = await db("users").select("first_name", "last_name", "profile_picture").where({ id: userId }).first();
+        const notification = {
+          id: nid,
+          user_id: parent.user_id,
+          sender_id: userId,
+          type: 'reply',
+          target_id: parentId,
+          is_read: false,
+          created_at: new Date(),
+          senderName: `${sender?.first_name} ${sender?.last_name}`,
+          senderProfile: sender?.profile_picture || null,
+        };
+        if (socketId) io.to(socketId).emit("notification", notification);
+        else io.emit("notification", notification);
+      }
+    } catch (e) {
+      console.error(e);
+    }
 
     res.json({ reply });
   } catch (err: any) {

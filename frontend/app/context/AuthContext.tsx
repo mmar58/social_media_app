@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { io, Socket } from "socket.io-client";
 
 export interface User {
   id: number;
@@ -17,6 +18,10 @@ interface AuthContextType {
   login: (token: string, user: User) => void;
   logout: () => void;
   loading: boolean;
+  notifications: any[];
+  unread: number;
+  markAllRead: () => Promise<void>;
+  markRead: (id: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +30,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unread, setUnread] = useState<number>(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -60,6 +68,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const fetchNotifications = async (authToken?: string) => {
+    try {
+      const t = authToken || token;
+      if (!t) return;
+      const res = await fetch("http://localhost:5000/api/notifications", {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+        setUnread(data.unread || 0);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const login = (newToken: string, loggedUser: User) => {
     localStorage.setItem("token", newToken);
     setToken(newToken);
@@ -74,8 +99,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/login");
   };
 
+  // mark all read
+  const markAllRead = async () => {
+    if (!token) return;
+    try {
+      await fetch("http://localhost:5000/api/notifications/mark-all-read", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setNotifications((n) => n.map((x) => ({ ...x, is_read: true })));
+      setUnread(0);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const markRead = async (id: number) => {
+    if (!token) return;
+    try {
+      await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setNotifications((n) => n.map((x) => (x.id === id ? { ...x, is_read: true } : x)));
+      setUnread((u) => Math.max(0, u - 1));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    // setup socket and fetch notifications when user available
+    if (!user || !token) return;
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
+    const s = io(socketUrl);
+    setSocket(s);
+
+    s.on("connect", () => {
+      try {
+        s.emit("register", user.id);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+
+    s.on("notification", (n: any) => {
+      setNotifications((prev) => [n, ...prev]);
+      setUnread((u) => u + 1);
+    });
+
+    // initial fetch
+    fetchNotifications(token);
+
+    return () => {
+      s.disconnect();
+      setSocket(null);
+    };
+  }, [user, token]);
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading, notifications, unread, markAllRead, markRead }}>
       {children}
     </AuthContext.Provider>
   );
