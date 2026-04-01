@@ -3,16 +3,28 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
-export default function PostItem({ post, onLike, onComment }: any) {
+export default function PostItem({ post, onLike, onComment, onCommentLike, onCommentReply }: any) {
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
+  const [showAllComments, setShowAllComments] = useState(false);
   const [commentText, setCommentText] = useState("");
+  
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState("");
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
     if (onComment) await onComment(post.id, commentText);
     setCommentText("");
+  };
+
+  const handleReplySubmit = async (e: React.FormEvent, commentId: number) => {
+    e.preventDefault();
+    if (!replyText.trim()) return;
+    if (onCommentReply) await onCommentReply(post.id, commentId, replyText);
+    setReplyText("");
+    setReplyingTo(null);
   };
 
   return (
@@ -185,13 +197,13 @@ export default function PostItem({ post, onLike, onComment }: any) {
       {showComments && post.comments?.length > 0 && (
           <div className="_timline_comment_main">
             <div className="_previous_comment">
-              {post.comments.length > 2 && (
-                <button type="button" className="_previous_comment_txt">
+              {!showAllComments && post.comments.length > 2 && (
+                <button type="button" className="_previous_comment_txt" onClick={() => setShowAllComments(true)}>
                   View {post.comments.length - 2} previous comments
                 </button>
               )}
             </div>
-            {post.comments.slice(-2).map((c: any) => (
+            {(showAllComments ? post.comments : post.comments.slice(-2)).map((c: any) => (
               <div className="_comment_main" key={c.id}>
                 <div className="_comment_image">
                   <a href="#0" className="_comment_image_link">
@@ -215,29 +227,71 @@ export default function PostItem({ post, onLike, onComment }: any) {
                     <div className="_comment_status">
                       <p className="_comment_status_text"><span>{c.content}</span></p>
                     </div>
-                    <div className="_total_reactions">
-                      <div className="_total_react">
-                        <span className="_reaction_like">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-thumbs-up"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
-                        </span>
-                        <span className="_reaction_heart">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-heart"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    {c.likes > 0 && (
+                      <div className="_total_reactions">
+                        <div className="_total_react">
+                          <span className="_reaction_like">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={c.isLiked ? "#1890FF" : "none"} stroke={c.isLiked ? "#1890FF" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-thumbs-up"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                          </span>
+                        </div>
+                        <span className="_total">
+                          {c.likes}
                         </span>
                       </div>
-                      <span className="_total">
-                        198
-                      </span>
-                    </div>
+                    )}
                     <div className="_comment_reply">
                       <div className="_comment_reply_num">
                         <ul className="_comment_reply_list">
-                          <li><span>Like.</span></li>
-                          <li><span>Reply.</span></li>
-                          <li><span>Share</span></li>
+                          <li><span style={{ cursor: "pointer", color: c.isLiked ? "#1890FF" : "inherit" }} onClick={() => onCommentLike && onCommentLike(post.id, c.id)}>Like.</span></li>
+                          <li><span style={{ cursor: "pointer" }} onClick={() => { setReplyingTo(replyingTo === c.id ? null : c.id); setReplyText(""); }}>Reply.</span></li>
                           <li><span className="_time_link">.{c.created_at ? new Date(c.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "now"}</span></li>
                         </ul>
                       </div>
                     </div>
+
+                    {replyingTo === c.id && (
+                      <div className="_feed_inner_comment_box" style={{ marginTop: "10px", padding: 0 }}>
+                        <form className="_feed_inner_comment_box_form" onSubmit={(e) => handleReplySubmit(e, c.id)}>
+                          <div className="_feed_inner_comment_box_content_txt" style={{flex: 1, padding: "0 10px"}}>
+                            <input
+                              autoFocus
+                              type="text"
+                              className="form-control _comment_textarea"
+                              placeholder="Write a reply..."
+                              style={{ height: "36px", borderRadius: "18px", padding: "0 15px", backgroundColor: "#f0f2f5", border: "none", width: "100%" }}
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                            />
+                          </div>
+                          <div className="_feed_inner_comment_box_icon">
+                            <button type="submit" className="_feed_inner_comment_box_icon_btn">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
+                                <path fill="#1890FF" fillRule="evenodd" d="M14.5 8L8 1.5 1.5 8H6v6h4V8h4.5z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+
+                    {c.replies?.length > 0 && (
+                      <div className="_replies_list" style={{ marginTop: "10px" }}>
+                        {c.replies.map((reply: any) => (
+                          <div className="_comment_main" key={reply.id} style={{ marginBottom: "10px", padding: 0, marginTop: "10px" }}>
+                            <div className="_comment_image">
+                              <img src={reply.authorProfilePicture || "/assets/images/txt_img.png"} alt="" className="_comment_img1" style={{ borderRadius: "50%", objectFit: "cover", width: "24px", height: "24px" }} />
+                            </div>
+                            <div className="_comment_area" style={{ flex: 1, width: "100%", padding: "8px 12px", borderRadius: "18px", backgroundColor: "#f0f2f5" }}>
+                              <div className="_comment_details_top">
+                                <div className="_comment_name"><a href="#0"><h4 className="_comment_name_title" style={{ fontSize: "12px", margin: 0 }}>{reply.authorName}</h4></a></div>
+                              </div>
+                              <div className="_comment_status"><p className="_comment_status_text" style={{ fontSize: "14px", margin: 0 }}><span>{reply.content}</span></p></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                   </div>
                 </div>
               </div>

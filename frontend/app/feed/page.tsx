@@ -166,6 +166,67 @@ export default function FeedPage() {
     } catch (err) {}
   };
 
+  const handleCommentLike = async (postId: number, commentId: number) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/posts/${postId}/comments/${commentId}/like`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPosts((prev) =>
+          prev.map((p) => {
+            if (p.id === postId) {
+              return {
+                ...p,
+                comments: p.comments.map((c: any) => {
+                  if (c.id === commentId) {
+                    return {
+                      ...c,
+                      isLiked: data.action === "liked",
+                      likes: data.action === "liked" ? c.likes + 1 : c.likes - 1,
+                    };
+                  }
+                  return c;
+                }),
+              };
+            }
+            return p;
+          })
+        );
+      }
+    } catch (err) {}
+  };
+
+  const handleCommentReply = async (postId: number, commentId: number, content: string) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/posts/${postId}/comments/${commentId}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ content }),
+      });
+      if (res.ok) {
+        const { reply } = await res.json();
+        setPosts((prev) =>
+          prev.map((p) => {
+            if (p.id === postId) {
+              return {
+                ...p,
+                comments: p.comments.map((c: any) => {
+                  if (c.id === commentId) {
+                    return { ...c, replies: [...(c.replies || []), reply] };
+                  }
+                  return c;
+                }),
+              };
+            }
+            return p;
+          })
+        );
+      }
+    } catch (err) {}
+  };
+
   if (loading || !user) {
     return <Loader />;
   }
@@ -198,7 +259,7 @@ export default function FeedPage() {
                       {/* Posts */}
                       <div className="posts-container">
                         {posts.map((post) => (
-                          <PostItem key={post.id} post={post} onLike={handleLike} onComment={handleComment} />
+                          <PostItem key={post.id} post={post} onLike={handleLike} onComment={handleComment} onCommentLike={handleCommentLike} onCommentReply={handleCommentReply} />
                         ))}
                       </div>
                     </div>

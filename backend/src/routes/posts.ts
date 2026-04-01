@@ -78,14 +78,40 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
       const comments = await db("comments")
         .select("comments.*", "users.first_name", "users.last_name", "users.profile_picture")
         .join("users", "comments.user_id", "users.id")
-        .where({ post_id: post.id, parent_id: null })
+        .where({ post_id: post.id })
         .orderBy("created_at", "asc");
 
-      post.comments = comments.map((c) => ({
-        ...c,
-        authorName: `${c.first_name} ${c.last_name}`,
-        authorProfilePicture: c.profile_picture,
-      }));
+      const commentIds = comments.map((c: any) => c.id);
+      let commentLikes: any[] = [];
+      if (commentIds.length > 0) {
+        commentLikes = await db("likes")
+          .where("target_type", "comment")
+          .whereIn("target_id", commentIds);
+      }
+
+      const formattedComments = comments.map((c) => {
+        const cLikes = commentLikes.filter((l) => l.target_id === c.id);
+        return {
+          ...c,
+          authorName: `${c.first_name} ${c.last_name}`,
+          authorProfilePicture: c.profile_picture,
+          likes: cLikes.length,
+          isLiked: cLikes.some((l) => l.user_id === userId),
+          replies: [],
+        };
+      });
+
+      const topLevelComments = formattedComments.filter((c) => c.parent_id === null);
+      const replies = formattedComments.filter((c) => c.parent_id !== null);
+
+      replies.forEach((reply) => {
+        const parent = topLevelComments.find((p) => p.id === reply.parent_id);
+        if (parent) {
+          parent.replies.push(reply);
+        }
+      });
+
+      post.comments = topLevelComments;
     }
 
     res.json({ posts });
@@ -179,6 +205,59 @@ router.post("/:id/comment", authenticate, async (req: AuthRequest, res) => {
     comment.authorProfilePicture = comment.profile_picture;
 
     res.json({ comment });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/:id/comments/:commentId/like", authenticate, async (req: AuthRequest, res) => {
+  try {
+    const commentId = req.params.commentId;
+    const userId = req.user.id;
+
+    const existing = await db("likes")
+      .where({ user_id: userId, target_type: "comment", target_id: commentId })
+      .first();
+
+    if (existing) {
+      await db("likes").where({ id: existing.id }).del();
+      res.json({ action: "unliked", likerUserId: userId });
+    } else {
+      await db("likes").insert({ user_id: userId, target_type: "comment", target_id: commentId });
+      res.json({ action: "liked", likerUserId: userId });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/:id/comments/:commentId/reply", authenticate, async (req: AuthRequest, res) => {
+  try {
+    const postId = req.params.id;
+    const parentId = req.params.commentId;
+    const userId = req.user.id;
+    const { content } = req.body;
+
+    const [id] = await db("comments").insert({
+      post_id: postId,
+      user_id: userId,
+      parent_id: parentId,
+      content,
+    });
+
+    const reply = await db("comments")
+      .select("comments.*", "users.first_name", "users.last_name", "users.profile_picture")
+      .join("users", "comments.user_id", "users.id")
+      .where("comments.id", id)
+      .first();
+
+    reply.authorName = `${reply.first_name} ${reply.last_name}`;
+    reply.authorProfilePicture = reply.profile_picture;
+    reply.likes = 0;
+    reply.isLiked = false;
+    reply.replies = [];
+
+    res.json({ reply });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
