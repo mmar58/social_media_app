@@ -4,6 +4,17 @@ import path from "path";
 import fs from "fs";
 import db from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { createNotification } from "../services/notificationService";
+import { hydratePosts } from "../services/postHydration";
+import { validateBody, validateParams, validateQuery } from "../validation";
+import {
+  commentParamsSchema,
+  commentPayloadSchema,
+  createPostSchema,
+  feedQuerySchema,
+  postIdParamsSchema,
+  replyParamsSchema,
+} from "../validation/schemas";
 
 const router = Router();
 
@@ -28,16 +39,22 @@ const upload = multer({
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extOk = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimeOk = allowedTypes.test(file.mimetype.split("/")[1]);
-    cb(null, extOk && mimeOk);
+    if (extOk && mimeOk) {
+      cb(null, true);
+      return;
+    }
+
+    cb(new Error("Only jpeg, jpg, png, gif, and webp images are allowed"));
   },
 });
 
-// GET /api/posts — supports ?search=term&limit=N
-router.get("/", authenticate, async (req: AuthRequest, res) => {
+// GET /api/posts — supports ?search=term&limit=N&cursor=postId
+router.get("/", authenticate, validateQuery(feedQuerySchema), async (req: AuthRequest, res) => {
   try {
     const userId = req.user.id;
-    const search = (req.query.search as string) || "";
-    const limit = parseInt(req.query.limit as string) || 50;
+    const search = ((req.query.search as string) || "").trim();
+    const limit = Number(req.query.limit) || 50;
+    const cursor = req.query.cursor ? Number(req.query.cursor) : null;
 
     let query = db("posts")
       .select("posts.*", "users.first_name", "users.last_name", "users.profile_picture")
@@ -45,6 +62,10 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
       .where(function () {
         this.where("visibility", "public").orWhere("posts.user_id", userId);
       });
+
+    if (cursor) {
+      query = query.andWhere("posts.id", "<", cursor);
+    }
 
     if (search.trim()) {
       query = query.andWhere(function () {
@@ -54,77 +75,27 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
       });
     }
 
-    const posts = await query.orderBy("posts.created_at", "desc").limit(limit);
+    const rawPosts = await query.orderBy("posts.id", "desc").limit(limit + 1);
+    const hasMore = rawPosts.length > limit;
+    const page = rawPosts.slice(0, limit);
+    const posts = await hydratePosts(page, userId);
+    const nextCursor = hasMore ? page[page.length - 1]?.id ?? null : null;
 
-    // Fetch likes and comments for posts
-    for (const post of posts) {
-      post.authorName = `${post.first_name} ${post.last_name}`;
-      post.authorProfilePicture = post.profile_picture;
-
-      const likeRows = await db("likes")
-        .select("likes.*", "users.first_name", "users.last_name", "users.profile_picture")
-        .join("users", "likes.user_id", "users.id")
-        .where({ "likes.target_type": "post", "likes.target_id": post.id })
-        .orderBy("likes.created_at", "desc")
-        .limit(8);
-      post.likes = likeRows.length;
-      post.isLiked = likeRows.some((l: any) => l.user_id === userId);
-      post.likers = likeRows.map((l: any) => ({
-        userId: l.user_id,
-        profile_picture: l.profile_picture,
-        name: `${l.first_name} ${l.last_name}`,
-      }));
-
-      const comments = await db("comments")
-        .select("comments.*", "users.first_name", "users.last_name", "users.profile_picture")
-        .join("users", "comments.user_id", "users.id")
-        .where({ post_id: post.id })
-        .orderBy("created_at", "asc");
-
-      const commentIds = comments.map((c: any) => c.id);
-      let commentLikes: any[] = [];
-      if (commentIds.length > 0) {
-        commentLikes = await db("likes")
-          .where("target_type", "comment")
-          .whereIn("target_id", commentIds);
-      }
-
-      const formattedComments = comments.map((c) => {
-        const cLikes = commentLikes.filter((l) => l.target_id === c.id);
-        return {
-          ...c,
-          authorName: `${c.first_name} ${c.last_name}`,
-          authorProfilePicture: c.profile_picture,
-          likes: cLikes.length,
-          isLiked: cLikes.some((l) => l.user_id === userId),
-          replies: [],
-        };
-      });
-
-      const topLevelComments = formattedComments.filter((c) => c.parent_id === null);
-      const replies = formattedComments.filter((c) => c.parent_id !== null);
-
-      replies.forEach((reply) => {
-        const parent = topLevelComments.find((p) => p.id === reply.parent_id);
-        if (parent) {
-          parent.replies.push(reply);
-        }
-      });
-
-      post.comments = topLevelComments;
-    }
-
-    res.json({ posts });
+    res.json({ posts, nextCursor, hasMore });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // POST /api/posts — supports multipart with optional image
-router.post("/", authenticate, upload.single("image"), async (req: AuthRequest, res) => {
+router.post("/", authenticate, upload.single("image"), validateBody(createPostSchema), async (req: AuthRequest, res) => {
   try {
     const { content, visibility } = req.body;
     const userId = req.user.id;
+
+    if (!req.file && !content.trim()) {
+      return res.status(400).json({ error: "Post content is required when no image is provided" });
+    }
 
     let image_url: string | null = null;
     if (req.file) {
@@ -138,19 +109,13 @@ router.post("/", authenticate, upload.single("image"), async (req: AuthRequest, 
       visibility: visibility || "public",
     });
 
-    const post = await db("posts")
+    const rawPost = await db("posts")
       .select("posts.*", "users.first_name", "users.last_name", "users.profile_picture")
       .join("users", "posts.user_id", "users.id")
       .where("posts.id", id)
       .first();
 
-    post.authorName = `${post.first_name} ${post.last_name}`;
-    post.authorProfilePicture = post.profile_picture;
-    post.likes = 0;
-    post.likers = [];
-    post.isLiked = false;
-    post.comments = [];
-    post.totalLikes = 0;
+    const [post] = await hydratePosts([rawPost], userId);
 
     res.json({ post });
   } catch (err: any) {
@@ -158,7 +123,7 @@ router.post("/", authenticate, upload.single("image"), async (req: AuthRequest, 
   }
 });
 
-router.post("/:id/like", authenticate, async (req: AuthRequest, res) => {
+router.post("/:id/like", authenticate, validateParams(postIdParamsSchema), async (req: AuthRequest, res) => {
   try {
     const postId = req.params.id;
     const userId = req.user.id;
@@ -171,37 +136,14 @@ router.post("/:id/like", authenticate, async (req: AuthRequest, res) => {
     } else {
       await db("likes").insert({ user_id: userId, target_type: "post", target_id: postId });
 
-      // notify post owner
-      try {
-        const post = await db("posts").where({ id: postId }).first();
-        if (post && post.user_id !== userId) {
-          const [nid] = await db("notifications").insert({
-            user_id: post.user_id,
-            sender_id: userId,
-            type: "like_post",
-            target_id: postId,
-          });
-
-          const io = req.app.get("io");
-          const socketMap: Map<number, string> = req.app.get("socketMap");
-          const socketId = socketMap.get(post.user_id);
-          const sender = await db("users").select("first_name", "last_name", "profile_picture").where({ id: userId }).first();
-          const notification = {
-            id: nid,
-            user_id: post.user_id,
-            sender_id: userId,
-            type: "like_post",
-            target_id: postId,
-            is_read: false,
-            created_at: new Date(),
-            senderName: `${sender?.first_name} ${sender?.last_name}`,
-            senderProfile: sender?.profile_picture || null,
-          };
-          if (socketId) io.to(socketId).emit("notification", notification);
-          else io.emit("notification", notification);
-        }
-      } catch (e) {
-        console.error(e);
+      const post = await db("posts").where({ id: postId }).first();
+      if (post) {
+        await createNotification(req.app, {
+          recipientUserId: post.user_id,
+          senderUserId: userId,
+          type: "like_post",
+          targetId: Number(postId),
+        });
       }
 
       const liker = await db("users").select("profile_picture", "first_name", "last_name").where({ id: userId }).first();
@@ -217,7 +159,7 @@ router.post("/:id/like", authenticate, async (req: AuthRequest, res) => {
   }
 });
 
-router.post("/:id/comment", authenticate, async (req: AuthRequest, res) => {
+router.post("/:id/comment", authenticate, validateParams(postIdParamsSchema), validateBody(commentPayloadSchema), async (req: AuthRequest, res) => {
   try {
     const postId = req.params.id;
     const userId = req.user.id;
@@ -230,7 +172,7 @@ router.post("/:id/comment", authenticate, async (req: AuthRequest, res) => {
     });
 
     const comment = await db("comments")
-      .select("comments.*", "users.first_name", "users.last_name")
+      .select("comments.*", "users.first_name", "users.last_name", "users.profile_picture")
       .join("users", "comments.user_id", "users.id")
       .where("comments.id", id)
       .first();
@@ -238,37 +180,14 @@ router.post("/:id/comment", authenticate, async (req: AuthRequest, res) => {
     comment.authorName = `${comment.first_name} ${comment.last_name}`;
     comment.authorProfilePicture = comment.profile_picture;
 
-    // notify post owner
-    try {
-      const post = await db("posts").where({ id: postId }).first();
-      if (post && post.user_id !== userId) {
-        const [nid] = await db("notifications").insert({
-          user_id: post.user_id,
-          sender_id: userId,
-          type: "comment",
-          target_id: id,
-        });
-
-        const io = req.app.get("io");
-        const socketMap: Map<number, string> = req.app.get("socketMap");
-        const socketId = socketMap.get(post.user_id);
-        const sender = await db("users").select("first_name", "last_name", "profile_picture").where({ id: userId }).first();
-        const notification = {
-          id: nid,
-          user_id: post.user_id,
-          sender_id: userId,
-          type: "comment",
-          target_id: id,
-          is_read: false,
-          created_at: new Date(),
-          senderName: `${sender?.first_name} ${sender?.last_name}`,
-          senderProfile: sender?.profile_picture || null,
-        };
-        if (socketId) io.to(socketId).emit("notification", notification);
-        else io.emit("notification", notification);
-      }
-    } catch (e) {
-      console.error(e);
+    const post = await db("posts").where({ id: postId }).first();
+    if (post) {
+      await createNotification(req.app, {
+        recipientUserId: post.user_id,
+        senderUserId: userId,
+        type: "comment",
+        targetId: id,
+      });
     }
 
     res.json({ comment });
@@ -277,7 +196,7 @@ router.post("/:id/comment", authenticate, async (req: AuthRequest, res) => {
   }
 });
 
-router.post("/:id/comments/:commentId/like", authenticate, async (req: AuthRequest, res) => {
+router.post("/:id/comments/:commentId/like", authenticate, validateParams(commentParamsSchema), async (req: AuthRequest, res) => {
   try {
     const commentId = req.params.commentId;
     const userId = req.user.id;
@@ -292,37 +211,14 @@ router.post("/:id/comments/:commentId/like", authenticate, async (req: AuthReque
     } else {
       await db("likes").insert({ user_id: userId, target_type: "comment", target_id: commentId });
 
-      // notify comment owner
-      try {
-        const comment = await db("comments").where({ id: commentId }).first();
-        if (comment && comment.user_id !== userId) {
-          const [nid] = await db("notifications").insert({
-            user_id: comment.user_id,
-            sender_id: userId,
-            type: "like_comment",
-            target_id: commentId,
-          });
-
-          const io = req.app.get("io");
-          const socketMap: Map<number, string> = req.app.get("socketMap");
-          const socketId = socketMap.get(comment.user_id);
-          const sender = await db("users").select("first_name", "last_name", "profile_picture").where({ id: userId }).first();
-          const notification = {
-            id: nid,
-            user_id: comment.user_id,
-            sender_id: userId,
-            type: "like_comment",
-            target_id: commentId,
-            is_read: false,
-            created_at: new Date(),
-            senderName: `${sender?.first_name} ${sender?.last_name}`,
-            senderProfile: sender?.profile_picture || null,
-          };
-          if (socketId) io.to(socketId).emit("notification", notification);
-          else io.emit("notification", notification);
-        }
-      } catch (e) {
-        console.error(e);
+      const comment = await db("comments").where({ id: commentId }).first();
+      if (comment) {
+        await createNotification(req.app, {
+          recipientUserId: comment.user_id,
+          senderUserId: userId,
+          type: "like_comment",
+          targetId: Number(commentId),
+        });
       }
 
       res.json({ action: "liked", likerUserId: userId });
@@ -332,7 +228,7 @@ router.post("/:id/comments/:commentId/like", authenticate, async (req: AuthReque
   }
 });
 
-router.post("/:id/comments/:commentId/reply", authenticate, async (req: AuthRequest, res) => {
+router.post("/:id/comments/:commentId/reply", authenticate, validateParams(replyParamsSchema), validateBody(commentPayloadSchema), async (req: AuthRequest, res) => {
   try {
     const postId = req.params.id;
     const parentId = req.params.commentId;
@@ -358,37 +254,14 @@ router.post("/:id/comments/:commentId/reply", authenticate, async (req: AuthRequ
     reply.isLiked = false;
     reply.replies = [];
 
-    // notify parent comment owner
-    try {
-      const parent = await db('comments').where({ id: parentId }).first();
-      if (parent && parent.user_id !== userId) {
-        const [nid] = await db('notifications').insert({
-          user_id: parent.user_id,
-          sender_id: userId,
-          type: 'reply',
-          target_id: id,
-        });
-
-        const io = req.app.get("io");
-        const socketMap: Map<number, string> = req.app.get("socketMap");
-        const socketId = socketMap.get(parent.user_id);
-        const sender = await db("users").select("first_name", "last_name", "profile_picture").where({ id: userId }).first();
-        const notification = {
-          id: nid,
-          user_id: parent.user_id,
-          sender_id: userId,
-          type: 'reply',
-          target_id: id,
-          is_read: false,
-          created_at: new Date(),
-          senderName: `${sender?.first_name} ${sender?.last_name}`,
-          senderProfile: sender?.profile_picture || null,
-        };
-        if (socketId) io.to(socketId).emit("notification", notification);
-        else io.emit("notification", notification);
-      }
-    } catch (e) {
-      console.error(e);
+    const parent = await db("comments").where({ id: parentId }).first();
+    if (parent) {
+      await createNotification(req.app, {
+        recipientUserId: parent.user_id,
+        senderUserId: userId,
+        type: "reply",
+        targetId: id,
+      });
     }
 
     res.json({ reply });

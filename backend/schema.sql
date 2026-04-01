@@ -54,3 +54,11 @@ CREATE TABLE IF NOT EXISTS notifications (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE INDEX idx_posts_user_created ON posts (user_id, created_at DESC);
+CREATE INDEX idx_posts_visibility_created ON posts (visibility, created_at DESC);
+CREATE INDEX idx_comments_post_created ON comments (post_id, created_at ASC);
+CREATE INDEX idx_comments_parent_created ON comments (parent_id, created_at ASC);
+CREATE INDEX idx_likes_target ON likes (target_type, target_id);
+CREATE INDEX idx_notifications_user_read_created ON notifications (user_id, is_read, created_at DESC);
+CREATE INDEX idx_notifications_user_created ON notifications (user_id, created_at DESC);

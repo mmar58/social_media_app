@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
 import NotificationPostModal from "./NotificationPostModal";
+import { apiUrl } from "../lib/api";
 
 interface HeaderProps {
   searchQuery?: string;
@@ -72,7 +73,7 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
 
     try {
       await markRead(notificationId);
-      const response = await fetch(`http://localhost:5000/api/notifications/${notificationId}/details`, {
+      const response = await fetch(apiUrl(`/api/notifications/${notificationId}/details`), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();

@@ -11,6 +11,7 @@ import LeftSidebar from "../components/LeftSidebar";
 import RightSidebar from "../components/RightSidebar";
 import { useRouter, useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
+import { apiUrl, socketBaseUrl } from "../lib/api";
 
 export default function FeedPage() {
   const socketRef = useRef<Socket | null>(null);
@@ -19,6 +20,9 @@ export default function FeedPage() {
   const searchParams = useSearchParams();
   const [posts, setPosts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [nextCursor, setNextCursor] = useState<number | null>(null);
+  const [hasMorePosts, setHasMorePosts] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [jumpHandled, setJumpHandled] = useState<string | null>(null);
 
@@ -40,8 +44,8 @@ export default function FeedPage() {
     if (!loading && !user) {
       router.push("/login");
     } else if (user && token) {
-      fetchPosts();
-      const socket = io("http://localhost:5000", { transports: ["websocket"], withCredentials: true });
+      fetchPosts({ reset: true });
+      const socket = io(socketBaseUrl, { transports: ["websocket"], withCredentials: true });
       socketRef.current = socket;
 
       socket.on("receive_post", (newPost) => {
@@ -77,25 +81,30 @@ export default function FeedPage() {
   }, [user, loading, router, token]);
 
   const fetchPosts = useCallback(
-    async (search?: string) => {
+    async ({ search, cursor, reset = false }: { search?: string; cursor?: number | null; reset?: boolean }) => {
       try {
         const params = new URLSearchParams();
         if (search?.trim()) params.set("search", search);
-        params.set("limit", "50");
-        const res = await fetch(`http://localhost:5000/api/posts?${params.toString()}`, {
+        if (cursor) params.set("cursor", String(cursor));
+        params.set("limit", "20");
+        const res = await fetch(apiUrl(`/api/posts?${params.toString()}`), {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        if (res.ok) setPosts(
-          data.posts.map((p: any) => ({
+        if (res.ok) {
+          const mappedPosts = data.posts.map((p: any) => ({
             ...p,
             comments: (p.comments || []).slice().sort((a: any, b: any) => {
               const ta = a.created_at ? new Date(a.created_at).getTime() : a.id || 0;
               const tb = b.created_at ? new Date(b.created_at).getTime() : b.id || 0;
               return tb - ta;
             }),
-          }))
-        );
+          }));
+
+          setNextCursor(data.nextCursor ?? null);
+          setHasMorePosts(Boolean(data.hasMore));
+          setPosts((current) => (reset ? mappedPosts : [...current, ...mappedPosts]));
+        }
       } catch (err) {
         console.error(err);
       }
@@ -105,11 +114,23 @@ export default function FeedPage() {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+    setJumpHandled(null);
     // Debounce search
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      fetchPosts(query);
+      fetchPosts({ search: query, reset: true });
     }, 400);
+  };
+
+  const handleLoadMore = async () => {
+    if (!hasMorePosts || !nextCursor || loadingMore) return;
+
+    setLoadingMore(true);
+    try {
+      await fetchPosts({ search: searchQuery, cursor: nextCursor, reset: false });
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   const handlePost = async (content: string, visibility: string, image?: File) => {
@@ -119,7 +140,7 @@ export default function FeedPage() {
       formData.append("visibility", visibility);
       if (image) formData.append("image", image);
 
-      const res = await fetch("http://localhost:5000/api/posts", {
+      const res = await fetch(apiUrl("/api/posts"), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -136,7 +157,7 @@ export default function FeedPage() {
 
   const handleLike = async (id: number) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${id}/like`, {
+      const res = await fetch(apiUrl(`/api/posts/${id}/like`), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -173,7 +194,7 @@ export default function FeedPage() {
 
   const handleComment = async (postId: number, content: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${postId}/comment`, {
+      const res = await fetch(apiUrl(`/api/posts/${postId}/comment`), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ content }),
@@ -195,7 +216,7 @@ export default function FeedPage() {
 
   const handleCommentLike = async (postId: number, commentId: number) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${postId}/comments/${commentId}/like`, {
+      const res = await fetch(apiUrl(`/api/posts/${postId}/comments/${commentId}/like`), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -227,7 +248,7 @@ export default function FeedPage() {
 
   const handleCommentReply = async (postId: number, commentId: number, content: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${postId}/comments/${commentId}/reply`, {
+      const res = await fetch(apiUrl(`/api/posts/${postId}/comments/${commentId}/reply`), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ content }),
@@ -343,6 +364,19 @@ export default function FeedPage() {
                           />
                         ))}
                       </div>
+                      {hasMorePosts && (
+                        <div style={{ display: "flex", justifyContent: "center", marginTop: "16px" }}>
+                          <button
+                            type="button"
+                            className="_feed_inner_text_area_btn_link"
+                            onClick={handleLoadMore}
+                            disabled={loadingMore}
+                            style={{ minWidth: "180px", opacity: loadingMore ? 0.7 : 1 }}
+                          >
+                            {loadingMore ? "Loading..." : "Load more posts"}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -176,6 +176,18 @@ function buildPredicate(args: any[]): Predicate {
     return (row: Row) => likeMatch(readValue(row, first), third);
   }
 
+  if (["<", "<=", ">", ">="].includes(String(second))) {
+    return (row: Row) => {
+      const leftValue = normalizeValue(readValue(row, first));
+      const rightValue = normalizeValue(third);
+
+      if (second === "<") return leftValue < rightValue;
+      if (second === "<=") return leftValue <= rightValue;
+      if (second === ">") return leftValue > rightValue;
+      return leftValue >= rightValue;
+    };
+  }
+
   return (row: Row) => valuesEqual(readValue(row, first), third);
 }
 

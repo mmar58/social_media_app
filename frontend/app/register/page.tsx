@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "../context/AuthContext";
+import { apiUrl } from "../lib/api";
 
 export default function Register() {
   const { login } = useAuth();
@@ -23,7 +24,7 @@ export default function Register() {
     }
     
     try {
-      const res = await fetch("http://localhost:5000/api/auth/register", {
+      const res = await fetch(apiUrl("/api/auth/register"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ first_name: firstName, last_name: lastName, email, password }),

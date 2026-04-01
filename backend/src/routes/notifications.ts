@@ -1,73 +1,11 @@
 import { Router } from "express";
 import db from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { hydratePostById } from "../services/postHydration";
+import { validateParams } from "../validation";
+import { notificationIdParamsSchema } from "../validation/schemas";
 
 const router = Router();
-
-async function hydratePost(postId: number, viewerId: number) {
-  const post = await db("posts")
-    .select("posts.*", "users.first_name", "users.last_name", "users.profile_picture")
-    .join("users", "posts.user_id", "users.id")
-    .where("posts.id", postId)
-    .first();
-
-  if (!post) return null;
-
-  post.authorName = `${post.first_name} ${post.last_name}`;
-  post.authorProfilePicture = post.profile_picture;
-
-  const likeRows = await db("likes")
-    .select("likes.*", "users.first_name", "users.last_name", "users.profile_picture")
-    .join("users", "likes.user_id", "users.id")
-    .where({ "likes.target_type": "post", "likes.target_id": post.id })
-    .orderBy("likes.created_at", "desc")
-    .limit(8);
-
-  post.likes = likeRows.length;
-  post.isLiked = likeRows.some((likeRow: any) => likeRow.user_id === viewerId);
-  post.likers = likeRows.map((likeRow: any) => ({
-    userId: likeRow.user_id,
-    profile_picture: likeRow.profile_picture,
-    name: `${likeRow.first_name} ${likeRow.last_name}`,
-  }));
-
-  const comments = await db("comments")
-    .select("comments.*", "users.first_name", "users.last_name", "users.profile_picture")
-    .join("users", "comments.user_id", "users.id")
-    .where({ post_id: post.id })
-    .orderBy("created_at", "asc");
-
-  const commentIds = comments.map((comment: any) => comment.id);
-  let commentLikes: any[] = [];
-  if (commentIds.length > 0) {
-    commentLikes = await db("likes")
-      .where("target_type", "comment")
-      .whereIn("target_id", commentIds);
-  }
-
-  const formattedComments = comments.map((comment: any) => {
-    const likesForComment = commentLikes.filter((likeRow) => likeRow.target_id === comment.id);
-    return {
-      ...comment,
-      authorName: `${comment.first_name} ${comment.last_name}`,
-      authorProfilePicture: comment.profile_picture,
-      likes: likesForComment.length,
-      isLiked: likesForComment.some((likeRow) => likeRow.user_id === viewerId),
-      replies: [],
-    };
-  });
-
-  const topLevelComments = formattedComments.filter((comment: any) => comment.parent_id === null);
-  const replies = formattedComments.filter((comment: any) => comment.parent_id !== null);
-
-  replies.forEach((reply: any) => {
-    const parent = topLevelComments.find((comment: any) => comment.id === reply.parent_id);
-    if (parent) parent.replies.push(reply);
-  });
-
-  post.comments = topLevelComments;
-  return post;
-}
 
 // GET /api/notifications - list notifications for authenticated user
 router.get("/", authenticate, async (req: AuthRequest, res) => {
@@ -111,7 +49,7 @@ router.post("/mark-all-read", authenticate, async (req: AuthRequest, res) => {
 });
 
 // POST /api/notifications/:id/read
-router.post("/:id/read", authenticate, async (req: AuthRequest, res) => {
+router.post("/:id/read", authenticate, validateParams(notificationIdParamsSchema), async (req: AuthRequest, res) => {
   try {
     const userId = req.user.id;
     const id = req.params.id;
@@ -123,7 +61,7 @@ router.post("/:id/read", authenticate, async (req: AuthRequest, res) => {
 });
 
 // GET /api/notifications/:id/details
-router.get("/:id/details", authenticate, async (req: AuthRequest, res) => {
+router.get("/:id/details", authenticate, validateParams(notificationIdParamsSchema), async (req: AuthRequest, res) => {
   try {
     const userId = req.user.id;
     const id = Number(req.params.id);
@@ -154,7 +92,7 @@ router.get("/:id/details", authenticate, async (req: AuthRequest, res) => {
       }
     }
 
-    const post = await hydratePost(postId, userId);
+    const post = await hydratePostById(postId, userId);
     if (!post) {
       return res.status(404).json({ error: "Post not found" });
     }

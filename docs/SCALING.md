@@ -8,11 +8,22 @@ The current codebase is a strong functional base, but it is not yet production-s
 
 ## Current bottlenecks
 
+## Implemented in this repository
+
+The codebase now includes a first round of low-cost scaling improvements:
+
+- batched post hydration for feed reads instead of route-level per-post N+1 queries.
+- cursor-based feed pagination using post ids.
+- explicit indexes in `backend/schema.sql` for hot read and notification paths.
+- centralized notification writes and socket fan-out in a backend service.
+- environment-based frontend API and socket configuration.
+- request validation for auth and post-related routes.
+
 ### Backend query shape
 
-`backend/src/routes/posts.ts` loads posts first and then runs additional queries for each post to fetch likes, comments, and comment likes.
+Older versions of `backend/src/routes/posts.ts` loaded posts first and then ran additional queries for each post to fetch likes, comments, and comment likes.
 
-That creates an N+1 query pattern and will become expensive quickly as:
+That route has now been refactored to batch related reads, but the underlying concern is still the right one for future expansion:
 
 - post count grows.
 - comments per post grow.
@@ -20,7 +31,7 @@ That creates an N+1 query pattern and will become expensive quickly as:
 
 ### Missing explicit indexes
 
-The schema currently relies mostly on primary keys and foreign keys. For heavy traffic, add indexes for the most common filters and sorts.
+The schema now includes explicit indexes for the most common filters and sorts.
 
 Suggested indexes:
 
@@ -48,7 +59,7 @@ Uploads are stored under `backend/uploads/` on the local server disk. That makes
 
 ### Hard-coded URLs
 
-The frontend directly calls `http://localhost:5000`. That is fine locally, but not for multiple environments, reverse proxies, or multi-region deployments.
+The frontend now resolves API and socket endpoints from environment variables instead of hard-coding `http://localhost:5000` throughout the component tree.
 
 ### No caching layer
 
@@ -216,6 +227,8 @@ If the goal is to turn this project into a scalable foundation, take these steps
 8. Add caching for hot reads and unread counts.
 9. Add read replicas and deployment automation.
 10. Revisit feed architecture for high-fanout users.
+
+The repository now covers items 1, 2, 4, and 7 in the current monolith.
 
 ## Bottom line
 

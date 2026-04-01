@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import PostItem from "./PostItem";
+import { apiUrl } from "../lib/api";
 
 interface NotificationPostModalProps {
   isOpen: boolean;
@@ -63,7 +64,7 @@ export default function NotificationPostModal({ isOpen, post, focusCommentId, fo
   const handleLike = async (postId: number) => {
     if (!token) return;
 
-    const response = await fetch(`http://localhost:5000/api/posts/${postId}/like`, {
+    const response = await fetch(apiUrl(`/api/posts/${postId}/like`), {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -97,7 +98,7 @@ export default function NotificationPostModal({ isOpen, post, focusCommentId, fo
   const handleComment = async (postId: number, content: string) => {
     if (!token) return;
 
-    const response = await fetch(`http://localhost:5000/api/posts/${postId}/comment`, {
+    const response = await fetch(apiUrl(`/api/posts/${postId}/comment`), {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ content }),
@@ -114,7 +115,7 @@ export default function NotificationPostModal({ isOpen, post, focusCommentId, fo
   const handleCommentLike = async (postId: number, commentId: number) => {
     if (!token) return;
 
-    const response = await fetch(`http://localhost:5000/api/posts/${postId}/comments/${commentId}/like`, {
+    const response = await fetch(apiUrl(`/api/posts/${postId}/comments/${commentId}/like`), {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -140,7 +141,7 @@ export default function NotificationPostModal({ isOpen, post, focusCommentId, fo
   const handleCommentReply = async (postId: number, commentId: number, content: string) => {
     if (!token) return;
 
-    const response = await fetch(`http://localhost:5000/api/posts/${postId}/comments/${commentId}/reply`, {
+    const response = await fetch(apiUrl(`/api/posts/${postId}/comments/${commentId}/reply`), {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ content }),

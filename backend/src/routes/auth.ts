@@ -3,10 +3,12 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import db from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { validateBody } from "../validation";
+import { loginSchema, registerSchema } from "../validation/schemas";
 
 const router = Router();
 
-router.post("/register", async (req, res) => {
+router.post("/register", validateBody(registerSchema), async (req, res) => {
   try {
     const { first_name, last_name, email, password } = req.body;
     
@@ -42,7 +44,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", validateBody(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await db("users").where({ email }).first();

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { mediaUrl } from "../lib/api";
 
 export default function PostItem({ post, jumpTarget, onLike, onComment, onCommentLike, onCommentReply, idPrefix = "" }: any) {
   const { user } = useAuth();
@@ -104,7 +105,7 @@ export default function PostItem({ post, jumpTarget, onLike, onComment, onCommen
         {post.image_url && (
           <div className="_feed_inner_timeline_image">
             <img
-              src={`http://localhost:5000${post.image_url}`}
+              src={mediaUrl(post.image_url) || undefined}
               alt="Post"
               className="_time_img"
               style={{ width: "100%", borderRadius: "6px", marginTop: "12px", objectFit: "cover", maxHeight: "500px" }}

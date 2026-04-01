@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
+import { apiUrl, socketBaseUrl } from "../lib/api";
 
 export interface User {
   id: number;
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const headers: Record<string, string> = {};
       if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
-      const res = await fetch("http://localhost:5000/api/auth/me", {
+      const res = await fetch(apiUrl("/api/auth/me"), {
         headers,
         credentials: "include",
       });
@@ -81,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const t = authToken || token;
       if (!t) return;
-      const res = await fetch("http://localhost:5000/api/notifications", {
+      const res = await fetch(apiUrl("/api/notifications"), {
         headers: { Authorization: `Bearer ${t}` },
       });
       if (res.ok) {
@@ -104,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     // try to clear server-side cookie as well
     try {
-      fetch("http://localhost:5000/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
+      fetch(apiUrl("/api/auth/logout"), { method: "POST", credentials: "include" }).catch(() => {});
     } catch (e) {}
     localStorage.removeItem("token");
     setToken(null);
@@ -116,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const markAllRead = async () => {
     if (!token) return;
     try {
-      await fetch("http://localhost:5000/api/notifications/mark-all-read", {
+      await fetch(apiUrl("/api/notifications/mark-all-read"), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -130,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const markRead = async (id: number) => {
     if (!token) return;
     try {
-      await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
+      await fetch(apiUrl(`/api/notifications/${id}/read`), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -144,8 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // setup socket and fetch notifications when user available
     if (!user || !token) return;
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
-    const s = io(socketUrl);
+    const s = io(socketBaseUrl, { withCredentials: true });
     setSocket(s);
 
     s.on("connect", () => {

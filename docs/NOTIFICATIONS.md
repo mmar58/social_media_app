@@ -158,9 +158,19 @@ At minimum add:
 
 ## Recommended backend refactor
 
-The current notification logic is repeated in multiple route handlers. That is manageable now, but it will become brittle as more features are added.
+The notification creation path is now centralized in a backend service. That removes the previous duplication from post, comment, like, and reply handlers.
 
-Introduce a notification service with a single API such as:
+The current service already owns:
+
+- notification row creation.
+- sender hydration.
+- socket fan-out to all currently connected sockets for a user.
+
+This keeps the route handlers focused on the write operation itself and makes future async or analytics work easier to add.
+
+The earlier route-level duplication was manageable at small scale, but it would become brittle as more features were added.
+
+The service follows the same shape recommended below:
 
 ```ts
 await sendNotification({
