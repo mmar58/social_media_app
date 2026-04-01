@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
-export default function PostItem({ post, jumpTarget, onLike, onComment, onCommentLike, onCommentReply }: any) {
+export default function PostItem({ post, jumpTarget, onLike, onComment, onCommentLike, onCommentReply, idPrefix = "" }: any) {
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
@@ -52,9 +52,11 @@ export default function PostItem({ post, jumpTarget, onLike, onComment, onCommen
     setReplyingTo(null);
   };
 
+  const withPrefix = (value: string) => (idPrefix ? `${idPrefix}-${value}` : value);
+
   return (
     <div
-      id={`post-${post.id}`}
+      id={withPrefix(`post-${post.id}`)}
       className="_feed_inner_timeline_post_area _b_radious6 _padd_b24 _padd_t24 _mar_b16"
       style={{ scrollMarginTop: "110px" }}
     >
@@ -234,7 +236,7 @@ export default function PostItem({ post, jumpTarget, onLike, onComment, onCommen
             </div>
             {(showAllComments ? post.comments : post.comments.slice(0, 2)).map((c: any) => (
               <div
-                id={`comment-${c.id}`}
+                id={withPrefix(`comment-${c.id}`)}
                 className="_comment_main"
                 key={c.id}
                 style={{ scrollMarginTop: "120px" }}
@@ -327,7 +329,7 @@ export default function PostItem({ post, jumpTarget, onLike, onComment, onCommen
                       <div className="_replies_list" style={{ marginTop: "10px" }}>
                         {c.replies.map((reply: any) => (
                           <div
-                            id={`reply-${reply.id}`}
+                            id={withPrefix(`reply-${reply.id}`)}
                             className="_comment_main"
                             key={reply.id}
                             style={{ marginBottom: "10px", padding: 0, marginTop: "10px", scrollMarginTop: "120px" }}

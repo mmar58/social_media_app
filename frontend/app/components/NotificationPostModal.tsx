@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import PostItem from "./PostItem";
 
 interface NotificationPostModalProps {
   isOpen: boolean;
@@ -11,6 +13,21 @@ interface NotificationPostModalProps {
 }
 
 export default function NotificationPostModal({ isOpen, post, focusCommentId, focusReplyId, onClose }: NotificationPostModalProps) {
+  const { token } = useAuth();
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [modalPost, setModalPost] = useState<any | null>(post);
+
+  useEffect(() => {
+    setModalPost(post);
+  }, [post]);
+
+  const jumpTarget = useMemo(() => {
+    if (!modalPost) return null;
+    if (focusReplyId) return { type: "reply", targetId: focusReplyId };
+    if (focusCommentId) return { type: "comment", targetId: focusCommentId };
+    return { type: "like_post", targetId: modalPost.id };
+  }, [focusCommentId, focusReplyId, modalPost]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -18,7 +35,7 @@ export default function NotificationPostModal({ isOpen, post, focusCommentId, fo
     if (!targetId) return;
 
     const timerId = window.setTimeout(() => {
-      const element = document.getElementById(targetId);
+      const element = scrollRef.current?.querySelector<HTMLElement>(`#${targetId}`);
       if (element) {
         element.scrollIntoView({ behavior: "smooth", block: "center" });
       }
@@ -43,7 +60,107 @@ export default function NotificationPostModal({ isOpen, post, focusCommentId, fo
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen || !post) return null;
+  const handleLike = async (postId: number) => {
+    if (!token) return;
+
+    const response = await fetch(`http://localhost:5000/api/posts/${postId}/like`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) return;
+
+    setModalPost((current: any) => {
+      if (!current) return current;
+
+      let updatedLikers = [...(current.likers || [])];
+      if (data.action === "liked") {
+        const newLiker = {
+          userId: data.likerUserId,
+          profile_picture: data.likerProfilePicture,
+          name: data.likerName,
+        };
+        updatedLikers = [newLiker, ...updatedLikers.filter((liker: any) => liker.userId !== data.likerUserId)].slice(0, 8);
+      } else {
+        updatedLikers = updatedLikers.filter((liker: any) => liker.userId !== data.likerUserId);
+      }
+
+      return {
+        ...current,
+        isLiked: data.action === "liked",
+        likes: data.action === "liked" ? current.likes + 1 : current.likes - 1,
+        likers: updatedLikers,
+      };
+    });
+  };
+
+  const handleComment = async (postId: number, content: string) => {
+    if (!token) return;
+
+    const response = await fetch(`http://localhost:5000/api/posts/${postId}/comment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ content }),
+    });
+    const data = await response.json();
+    if (!response.ok) return;
+
+    setModalPost((current: any) => {
+      if (!current) return current;
+      return { ...current, comments: [data.comment, ...(current.comments || [])] };
+    });
+  };
+
+  const handleCommentLike = async (postId: number, commentId: number) => {
+    if (!token) return;
+
+    const response = await fetch(`http://localhost:5000/api/posts/${postId}/comments/${commentId}/like`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) return;
+
+    setModalPost((current: any) => {
+      if (!current) return current;
+      return {
+        ...current,
+        comments: (current.comments || []).map((comment: any) => {
+          if (comment.id !== commentId) return comment;
+          return {
+            ...comment,
+            isLiked: data.action === "liked",
+            likes: data.action === "liked" ? comment.likes + 1 : comment.likes - 1,
+          };
+        }),
+      };
+    });
+  };
+
+  const handleCommentReply = async (postId: number, commentId: number, content: string) => {
+    if (!token) return;
+
+    const response = await fetch(`http://localhost:5000/api/posts/${postId}/comments/${commentId}/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ content }),
+    });
+    const data = await response.json();
+    if (!response.ok) return;
+
+    setModalPost((current: any) => {
+      if (!current) return current;
+      return {
+        ...current,
+        comments: (current.comments || []).map((comment: any) => {
+          if (comment.id !== commentId) return comment;
+          return { ...comment, replies: [data.reply, ...(comment.replies || [])] };
+        }),
+      };
+    });
+  };
+
+  if (!isOpen || !modalPost) return null;
 
   return (
     <div
@@ -73,7 +190,7 @@ export default function NotificationPostModal({ isOpen, post, focusCommentId, fo
         onClick={(event) => event.stopPropagation()}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid rgba(17,32,50,0.08)" }}>
-          <h3 style={{ margin: 0, fontSize: "24px", fontWeight: 700, color: "var(--color6)" }}></h3>
+          <h3 style={{ margin: 0, fontSize: "24px", fontWeight: 700, color: "var(--color6)" }}>Notification</h3>
           <button
             type="button"
             onClick={onClose}
@@ -83,131 +200,16 @@ export default function NotificationPostModal({ isOpen, post, focusCommentId, fo
           </button>
         </div>
 
-        <div style={{ overflowY: "auto", padding: "24px" }}>
-          <div className="_feed_inner_timeline_post_area _b_radious6" style={{ marginBottom: 0 }}>
-            <div className="_feed_inner_timeline_content _padd_r24 _padd_l24" style={{ paddingTop: 0 }}>
-              <div className="_feed_inner_timeline_post_top">
-                <div className="_feed_inner_timeline_post_box">
-                  <div className="_feed_inner_timeline_post_box_image">
-                    <img
-                      src={post.authorProfilePicture || "/assets/images/post_img.png"}
-                      alt=""
-                      className="_post_img"
-                      style={{ borderRadius: "50%", objectFit: "cover", width: "44px", height: "44px" }}
-                    />
-                  </div>
-                  <div className="_feed_inner_timeline_post_box_txt">
-                    <h4 className="_feed_inner_timeline_post_box_title">{post.authorName}</h4>
-                    <p className="_feed_inner_timeline_post_box_para">
-                      {post.created_at ? new Date(post.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Just now"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <h4 className="_feed_inner_timeline_post_title">{post.content}</h4>
-
-              {post.image_url && (
-                <div className="_feed_inner_timeline_image">
-                  <img
-                    src={`http://localhost:5000${post.image_url}`}
-                    alt="Post"
-                    className="_time_img"
-                    style={{ width: "100%", borderRadius: "6px", marginTop: "12px", objectFit: "cover", maxHeight: "500px" }}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="_feed_inner_timeline_total_reacts _padd_r24 _padd_l24" style={{ marginBottom: 12 }}>
-              <div className="_feed_inner_timeline_total_reacts_image">
-                {post.likes > 0 && <p className="_feed_inner_timeline_total_reacts_para">{post.likes}</p>}
-              </div>
-              <div className="_feed_inner_timeline_total_reacts_txt">
-                <p className="_feed_inner_timeline_total_reacts_para1"><span>{post.comments?.length || 0}</span> Comment</p>
-              </div>
-            </div>
-
-            <div className="_timline_comment_main" style={{ padding: "0 24px 24px" }}>
-              {post.comments?.map((comment: any) => {
-                const isFocusedComment = focusCommentId === comment.id;
-                return (
-                  <div
-                    id={`notification-comment-${comment.id}`}
-                    className="_comment_main"
-                    key={comment.id}
-                    style={{ scrollMarginTop: "120px" }}
-                  >
-                    <div className="_comment_image">
-                      <img
-                        src={comment.authorProfilePicture || "/assets/images/txt_img.png"}
-                        alt=""
-                        className="_comment_img1"
-                        style={{ borderRadius: "50%", objectFit: "cover" }}
-                      />
-                    </div>
-                    <div className="_comment_area" style={{ flex: 1, width: "100%" }}>
-                      <div
-                        className="_comment_details"
-                        style={{
-                          width: "100%",
-                          backgroundColor: isFocusedComment ? "rgba(24, 144, 255, 0.08)" : undefined,
-                          boxShadow: isFocusedComment ? "0 0 0 2px rgba(24, 144, 255, 0.15)" : undefined,
-                          borderRadius: isFocusedComment ? "16px" : undefined,
-                          padding: isFocusedComment ? "8px 10px" : undefined,
-                        }}
-                      >
-                        <div className="_comment_details_top">
-                          <div className="_comment_name">
-                            <h4 className="_comment_name_title">{comment.authorName}</h4>
-                          </div>
-                        </div>
-                        <div className="_comment_status">
-                          <p className="_comment_status_text"><span>{comment.content}</span></p>
-                        </div>
-
-                        {(comment.replies || []).length > 0 && (
-                          <div className="_replies_list" style={{ marginTop: "10px" }}>
-                            {comment.replies.map((reply: any) => {
-                              const isFocusedReply = focusReplyId === reply.id;
-                              return (
-                                <div
-                                  id={`notification-reply-${reply.id}`}
-                                  className="_comment_main"
-                                  key={reply.id}
-                                  style={{ marginBottom: "10px", padding: 0, marginTop: "10px", scrollMarginTop: "120px" }}
-                                >
-                                  <div className="_comment_image">
-                                    <img src={reply.authorProfilePicture || "/assets/images/txt_img.png"} alt="" className="_comment_img1" style={{ borderRadius: "50%", objectFit: "cover", width: "24px", height: "24px" }} />
-                                  </div>
-                                  <div
-                                    className="_comment_area"
-                                    style={{
-                                      flex: 1,
-                                      width: "100%",
-                                      padding: "8px 12px",
-                                      borderRadius: "18px",
-                                      backgroundColor: isFocusedReply ? "rgba(24, 144, 255, 0.12)" : "#f0f2f5",
-                                      boxShadow: isFocusedReply ? "0 0 0 2px rgba(24, 144, 255, 0.15)" : undefined,
-                                    }}
-                                  >
-                                    <div className="_comment_details_top">
-                                      <div className="_comment_name"><h4 className="_comment_name_title" style={{ fontSize: "12px", margin: 0 }}>{reply.authorName}</h4></div>
-                                    </div>
-                                    <div className="_comment_status"><p className="_comment_status_text" style={{ fontSize: "14px", margin: 0 }}><span>{reply.content}</span></p></div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        <div ref={scrollRef} style={{ overflowY: "auto", padding: "24px" }}>
+          <PostItem
+            post={modalPost}
+            jumpTarget={jumpTarget}
+            onLike={handleLike}
+            onComment={handleComment}
+            onCommentLike={handleCommentLike}
+            onCommentReply={handleCommentReply}
+            idPrefix="notification"
+          />
         </div>
       </div>
     </div>
