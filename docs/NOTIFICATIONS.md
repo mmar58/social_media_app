@@ -84,7 +84,7 @@ The detail endpoint resolves:
 
 The frontend then opens `NotificationPostModal` and scrolls to the relevant element.
 
-While that modal is open, it also listens for live post, comment, comment-like, and reply events so the preview stays current.
+The focused post is first upserted into the shared post store, and the modal then reuses the same mutation handlers and live-updated state as the feed.
 
 ## How to connect notifications from any new feature
 
@@ -168,6 +168,8 @@ The current service already owns:
 - sender hydration.
 - socket fan-out to all currently connected sockets for a user.
 
+Current automated coverage now includes the header notification flow plus shared-post-store hydration before the modal opens, while feed-side socket updates are covered separately through `PostContext` tests.
+
 This keeps the route handlers focused on the write operation itself and makes future async or analytics work easier to add.
 
 The earlier route-level duplication was manageable at small scale, but it would become brittle as more features were added.
@@ -207,5 +209,14 @@ Use one of these patterns explicitly:
 - The header notification renderer only supports the current four notification types.
 - Feed and notification modal sync currently rely on broadcast-style socket events rather than authorization-aware rooms.
 - Notification side effects still run inline in request handlers instead of through a queue or event bus.
+
+## Current improvement scope
+
+The highest-value next improvements for notifications are:
+
+- move socket fan-out to room-scoped delivery instead of broad broadcast listeners.
+- back realtime delivery with a shared adapter for multi-instance deployments.
+- move notification creation and fan-out behind async domain events.
+- add dedicated tests for modal focus behavior and realtime notification-preview updates inside the modal itself.
 
 Those limitations are fine for the current app, but future features should not keep copying the same route-level pattern forever.

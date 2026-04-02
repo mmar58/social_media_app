@@ -110,4 +110,53 @@ describe("post interactions", () => {
     await user.click(screen.getByText("Like."));
     expect(onCommentLike).toHaveBeenCalledWith(101, 201);
   });
+
+  it("loads comments lazily and can request more comment pages", async () => {
+    const user = userEvent.setup();
+    const onLoadComments = vi.fn().mockResolvedValue(undefined);
+    const onLoadMoreComments = vi.fn().mockResolvedValue(undefined);
+
+    const post = {
+      id: 404,
+      authorName: "Alice Adams",
+      authorProfilePicture: "https://example.com/alice.png",
+      created_at: "2026-04-01T10:00:00.000Z",
+      visibility: "public",
+      content: "Needs lazy comments",
+      image_url: null,
+      likes: 0,
+      isLiked: false,
+      likers: [],
+      totalComments: 3,
+      commentsLoaded: false,
+      commentsLoading: false,
+      hasMoreComments: true,
+      comments: [],
+    };
+
+    render(
+      <PostItem
+        post={post}
+        onLike={vi.fn()}
+        onComment={vi.fn()}
+        onCommentLike={vi.fn()}
+        onCommentReply={vi.fn()}
+        onLoadComments={onLoadComments}
+        onLoadMoreComments={onLoadMoreComments}
+      />
+    );
+
+    expect(screen.getByRole("link", { name: /3 comment/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /comment/i }));
+
+    await waitFor(() => {
+      expect(onLoadComments).toHaveBeenCalledWith(404);
+    });
+
+    expect(screen.getByText(/no comments yet/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /load more comments/i }));
+    expect(onLoadMoreComments).toHaveBeenCalledWith(404);
+  });
 });

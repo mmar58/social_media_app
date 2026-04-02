@@ -17,7 +17,7 @@ function buildCommentTree(comments: any[]) {
   const commentsById = new Map(topLevelComments.map((comment) => [comment.id, comment]));
 
   for (const reply of replies) {
-    const parent = commentsById.get(reply.parent_id);
+    const parent = commentsById.get(Number(reply.parent_id));
     if (parent) {
       parent.replies.push(reply);
     }
@@ -44,7 +44,6 @@ async function hydratePostsWithOptions(rawPosts: RawPost[], viewerId: number, op
     .orderBy("likes.created_at", "desc");
 
   const commentCountRows = await db("comments")
-    .select("comments.id", "comments.post_id")
     .whereIn("comments.post_id", postIds);
 
   const comments = options.includeComments
@@ -64,16 +63,18 @@ async function hydratePostsWithOptions(rawPosts: RawPost[], viewerId: number, op
 
   const postLikesByPostId = new Map<number, any[]>();
   for (const likeRow of postLikeRows) {
-    const likesForPost = postLikesByPostId.get(likeRow.target_id) || [];
+    const postId = Number(likeRow.target_id);
+    const likesForPost = postLikesByPostId.get(postId) || [];
     likesForPost.push(likeRow);
-    postLikesByPostId.set(likeRow.target_id, likesForPost);
+    postLikesByPostId.set(postId, likesForPost);
   }
 
   const commentLikesByCommentId = new Map<number, any[]>();
   for (const likeRow of commentLikeRows) {
-    const likesForComment = commentLikesByCommentId.get(likeRow.target_id) || [];
+    const commentId = Number(likeRow.target_id);
+    const likesForComment = commentLikesByCommentId.get(commentId) || [];
     likesForComment.push(likeRow);
-    commentLikesByCommentId.set(likeRow.target_id, likesForComment);
+    commentLikesByCommentId.set(commentId, likesForComment);
   }
 
   const commentsByPostId = new Map<number, any[]>();
@@ -88,15 +89,17 @@ async function hydratePostsWithOptions(rawPosts: RawPost[], viewerId: number, op
       replies: [],
     };
 
-    const commentsForPost = commentsByPostId.get(comment.post_id) || [];
+    const postId = Number(comment.post_id);
+    const commentsForPost = commentsByPostId.get(postId) || [];
     commentsForPost.push(formattedComment);
-    commentsByPostId.set(comment.post_id, commentsForPost);
+    commentsByPostId.set(postId, commentsForPost);
   }
 
   const commentCountsByPostId = new Map<number, number>();
   for (const row of commentCountRows) {
-    const currentCount = commentCountsByPostId.get(row.post_id) || 0;
-    commentCountsByPostId.set(row.post_id, currentCount + 1);
+    const postId = Number(row.post_id);
+    const currentCount = commentCountsByPostId.get(postId) || 0;
+    commentCountsByPostId.set(postId, currentCount + 1);
   }
 
   return rawPosts.map((post) => {
@@ -163,9 +166,10 @@ export async function hydratePostComments(postId: number, viewerId: number, opti
 
   const commentLikesByCommentId = new Map<number, any[]>();
   for (const likeRow of commentLikeRows) {
-    const likesForComment = commentLikesByCommentId.get(likeRow.target_id) || [];
+    const commentId = Number(likeRow.target_id);
+    const likesForComment = commentLikesByCommentId.get(commentId) || [];
     likesForComment.push(likeRow);
-    commentLikesByCommentId.set(likeRow.target_id, likesForComment);
+    commentLikesByCommentId.set(commentId, likesForComment);
   }
 
   const formattedComments = comments.map((comment: any) => {

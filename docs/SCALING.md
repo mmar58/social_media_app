@@ -64,11 +64,17 @@ That creates two problems:
 
 The next real-time hardening step should be moving to room-based delivery keyed by user id and, where needed, post id.
 
-### Duplicated client-side socket consumers
+### Shared client store, but still lightweight
 
-The feed and notification modal currently maintain separate socket connections and duplicate parts of the same live-update logic.
+The frontend now centralizes feed state, comment pagination, post mutations, and shared realtime updates in `frontend/app/context/PostContext.tsx`.
 
-That is acceptable for this scope, but a shared socket provider or event store would be a cleaner next step.
+That removes the earlier duplicate feed and modal socket consumers, but the current request/cache layer is still intentionally small:
+
+- GET deduplication and short-lived caching exist.
+- cache invalidation is manual.
+- there is no full query lifecycle system for stale refetches, background refresh, or mutation orchestration.
+
+That is a reasonable middle step for this repository, but a larger product would likely adopt a more complete query/cache layer.
 
 ### Local file storage
 
@@ -208,6 +214,7 @@ Redis helps, but it is not the whole answer.
 - add cursor-based pagination instead of fixed `limit=50` only.
 - split write and read traffic when needed.
 - avoid loading full comment trees for every feed read.
+- keep top-level comment pagination and reply hydration under review as comment volumes grow.
 
 ### Storage improvements
 
@@ -219,8 +226,7 @@ Redis helps, but it is not the whole answer.
 
 - introduce backend services for posts, hydration, and notifications.
 - introduce a frontend API client instead of repeated raw fetch calls.
-- unify frontend socket consumption behind a shared provider or hook.
-- centralize post mutation state updates so feed and modal do not drift.
+- keep evolving the shared request/store layer so retry, invalidation, and stale data policies stay explicit.
 - add request validation.
 - add rate limiting.
 - add retry-aware async jobs.
@@ -247,7 +253,7 @@ If the goal is to turn this project into a scalable foundation, take these steps
 9. Add read replicas and deployment automation.
 10. Revisit feed architecture for high-fanout users.
 
-The repository now covers items 1, 2, 4, and 7 in the current monolith.
+The repository now covers items 1, 2, 4, and 7 in the current monolith, and it has already split comment-thread reads away from feed hydration.
 
 ## Bottom line
 

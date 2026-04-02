@@ -108,9 +108,10 @@ comments 1 --- * comments (reply chain via parent_id)
 ### Post and interaction flow
 
 1. `CreatePostBox` submits `multipart/form-data` to `POST /api/posts`.
-2. `PostContext` triggers likes, comments, comment likes, and replies through dedicated mutation endpoints.
-3. Backend route handlers persist the mutation and return the minimal payload needed by the UI.
-4. The shared auth-owned socket emits realtime events to update other active clients.
+2. The backend validates upload type and enforces a 5 MB size limit before persisting the post.
+3. `PostContext` triggers likes, comments, comment likes, and replies through dedicated mutation endpoints.
+4. Backend route handlers persist the mutation and return the minimal payload needed by the UI.
+5. The shared auth-owned socket emits realtime events to update other active clients.
 
 ### Notification flow
 
@@ -134,6 +135,7 @@ comments 1 --- * comments (reply chain via parent_id)
 ### API and business logic
 
 - Request validation is handled through reusable Zod middleware.
+- Upload validation is enforced in the posts route through multer type and size guards.
 - Notification creation is centralized in `backend/src/services/notificationService.ts`.
 - Feed and notification detail hydration share `backend/src/services/postHydration.ts`.
 - Feed hydration and comment-thread hydration are split so comment pagination can happen independently per post.

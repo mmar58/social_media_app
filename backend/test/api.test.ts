@@ -233,4 +233,109 @@ describe("backend api", () => {
     expect(dbState.comments).toHaveLength(3);
     expect(dbState.notifications).toHaveLength(4);
   });
+
+  it("returns feed comment summaries and paginates comment threads separately", async () => {
+    const { app } = createApp();
+    const alice = await registerUser({
+      first_name: "Alice",
+      last_name: "Adams",
+      email: "alice@example.com",
+      password: "password123",
+    });
+    const bob = await registerUser({
+      first_name: "Bob",
+      last_name: "Baker",
+      email: "bob@example.com",
+      password: "password456",
+    });
+
+    const createdPost = await request(app)
+      .post("/api/posts")
+      .set("Authorization", `Bearer ${alice.token}`)
+      .send({ content: "Post with many comments", visibility: "public" });
+    expect(createdPost.status).toBe(200);
+    const postId = createdPost.body.post.id;
+
+    const firstComment = await request(app)
+      .post(`/api/posts/${postId}/comment`)
+      .set("Authorization", `Bearer ${bob.token}`)
+      .send({ content: "First comment" });
+    const firstCommentId = firstComment.body.comment.id;
+
+    const reply = await request(app)
+      .post(`/api/posts/${postId}/comments/${firstCommentId}/reply`)
+      .set("Authorization", `Bearer ${alice.token}`)
+      .send({ content: "Reply to first" });
+    expect(reply.status).toBe(200);
+
+    const secondComment = await request(app)
+      .post(`/api/posts/${postId}/comment`)
+      .set("Authorization", `Bearer ${bob.token}`)
+      .send({ content: "Second comment" });
+    const secondCommentId = secondComment.body.comment.id;
+
+    const thirdComment = await request(app)
+      .post(`/api/posts/${postId}/comment`)
+      .set("Authorization", `Bearer ${alice.token}`)
+      .send({ content: "Third comment" });
+    const thirdCommentId = thirdComment.body.comment.id;
+
+    const feed = await request(app)
+      .get("/api/posts")
+      .set("Authorization", `Bearer ${bob.token}`);
+    expect(feed.status).toBe(200);
+    expect(feed.body.posts).toHaveLength(1);
+    expect(feed.body.posts[0].comments).toEqual([]);
+    expect(feed.body.posts[0].commentsLoaded).toBe(false);
+    expect(feed.body.posts[0].totalComments).toBe(4);
+
+    const firstPage = await request(app)
+      .get(`/api/posts/${postId}/comments?limit=2`)
+      .set("Authorization", `Bearer ${bob.token}`);
+    expect(firstPage.status).toBe(200);
+    expect(firstPage.body.totalComments).toBe(4);
+    expect(firstPage.body.hasMore).toBe(true);
+    expect(firstPage.body.comments).toHaveLength(2);
+    expect(firstPage.body.comments.map((comment: any) => comment.id)).toEqual([thirdCommentId, secondCommentId]);
+    expect(firstPage.body.nextCursor).toBe(secondCommentId);
+
+    const secondPage = await request(app)
+      .get(`/api/posts/${postId}/comments?limit=2&cursor=${firstPage.body.nextCursor}`)
+      .set("Authorization", `Bearer ${bob.token}`);
+    expect(secondPage.status).toBe(200);
+    expect(secondPage.body.hasMore).toBe(false);
+    expect(secondPage.body.comments).toHaveLength(1);
+    expect(secondPage.body.comments[0].id).toBe(firstCommentId);
+    expect(secondPage.body.comments[0].replies).toHaveLength(1);
+    expect(secondPage.body.comments[0].replies[0].content).toBe("Reply to first");
+  });
+
+  it("forbids reading paginated comments for another user's private post", async () => {
+    const { app } = createApp();
+    const alice = await registerUser({
+      first_name: "Alice",
+      last_name: "Adams",
+      email: "alice@example.com",
+      password: "password123",
+    });
+    const bob = await registerUser({
+      first_name: "Bob",
+      last_name: "Baker",
+      email: "bob@example.com",
+      password: "password456",
+    });
+
+    const privatePost = await request(app)
+      .post("/api/posts")
+      .set("Authorization", `Bearer ${alice.token}`)
+      .send({ content: "Private thread", visibility: "private" });
+    expect(privatePost.status).toBe(200);
+
+    const response = await request(app)
+      .get(`/api/posts/${privatePost.body.post.id}/comments`)
+      .set("Authorization", `Bearer ${bob.token}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe("Forbidden");
+  });
 });

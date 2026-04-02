@@ -51,6 +51,14 @@ Watch mode is also available in both apps with `pnpm test:watch`.
 * notification list and unread counts.
 * notification detail hydration.
 * mark-one-read and mark-all-read flows.
+* feed comment summary fields.
+* paginated `GET /api/posts/:id/comments` behavior.
+* private-post comment page authorization.
+
+`backend/test/uploads.test.ts` currently verifies:
+
+* rejection of non-image uploads.
+* rejection of files larger than 5 MB.
 
 ### Frontend coverage
 
@@ -70,20 +78,32 @@ Watch mode is also available in both apps with `pnpm test:watch`.
 * comment likes.
 * replies.
 * jump targeting for nested reply display.
+* lazy comment loading triggers.
+* load-more comment pagination triggers.
+
+`frontend/test/header-notifications.test.tsx` currently verifies:
+
+* notification dropdown rendering.
+* mark-read plus detail fetch when opening a notification.
+* hydration of the shared post store before opening `NotificationPostModal`.
+
+`frontend/test/postcontext-sockets.test.tsx` currently verifies:
+
+* registration of the shared PostContext socket listeners.
+* feed-store updates for `receive_post`, `update_likes`, `receive_comment`, `update_comment_likes`, and `receive_reply`.
+* socket listener cleanup on unmount.
 
 ## Current gaps
 
 The current test suite is useful, but there are still important untested areas:
 
 * `AuthContext` token restoration and socket registration.
-* notification dropdown rendering in `Header.tsx`.
-* notification modal behavior in `NotificationPostModal.tsx`.
 * error paths for failed fetches.
-* upload validation and file handling edge cases.
-* socket-driven updates in the feed UI.
 * socket-driven updates in the notification modal.
 * search behavior and debounce behavior.
-* cursor pagination and load-more behavior.
+* feed cursor pagination and load-more behavior.
+* notification modal focus behavior for targeted comments and replies.
+* deeper upload-path coverage beyond MIME and size rejection, such as storage failures.
 
 ## How to add backend tests
 
@@ -143,10 +163,10 @@ These will provide the best return first:
 
 
 1. Add tests for `Header.tsx` notification rendering and mark-read behavior.
-2. Add tests for `NotificationPostModal.tsx` focus behavior.
-3. Add backend tests for invalid auth and invalid notification ids.
-4. Add tests for feed search and debounced fetch behavior.
-5. Add tests for image upload validation and size limits.
-6. Add tests for socket-driven comment-like and reply synchronization in both feed and notification modal.
+1. Add tests for `NotificationPostModal.tsx` focus behavior.
+2. Add backend tests for invalid auth and invalid notification ids.
+3. Add tests for feed search and debounced fetch behavior.
+4. Add tests for feed cursor pagination and load-more behavior through `PostContext`.
+5. Add tests for socket-driven comment-like and reply synchronization inside the notification modal.
 
 

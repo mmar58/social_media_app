@@ -13,10 +13,12 @@ The codebase is split into two runtime applications:
 * Persists the auth token in the browser and restores the user on reload.
 * Loads a cursor-paginated feed of public posts plus the signed-in user's private posts.
 * Creates posts with optional image upload and public/private visibility.
+* Rejects non-image uploads and images larger than 5 MB on post creation.
 * Supports likes on posts and comments.
 * Supports top-level comments and replies.
 * Pushes notifications in real time for post likes, comments, comment likes, and replies.
 * Opens notification details in a focused modal that scrolls to the related post, comment, or reply.
+* Loads comment threads lazily per post through a paginated comments endpoint instead of embedding full comment trees in feed reads.
 * Live-syncs feed and notification modal updates for post likes, comments, comment likes, and replies.
 
 ## Workspace structure
@@ -118,12 +120,26 @@ pnpm test
 ## Important current implementation notes
 
 * The frontend now resolves backend API and socket URLs through `frontend/app/lib/api.ts` and environment variables.
-* Feed reads use batched hydration and cursor pagination instead of the earlier per-post N+1 pattern.
+* Feed reads use batched hydration and cursor pagination, and comment threads are fetched separately through `GET /api/posts/:id/comments`.
 * Notification creation is centralized in a backend service and supports multiple active sockets per user.
+* Feed state, post mutations, and live updates are centralized in `frontend/app/context/PostContext.tsx`, backed by a shared request helper in `frontend/app/lib/request.ts`.
+* Post creation upload validation currently allows `jpeg`, `jpg`, `png`, `gif`, and `webp` files up to 5 MB.
 * Uploaded files are stored on local disk under `backend/uploads/`.
 * Real-time user-to-socket mapping is stored in memory inside the backend process.
 * Real-time feed and modal events are still broadcast-oriented rather than room-scoped, which is simple but not yet ideal for privacy or scale.
-* The notification modal and feed currently open separate Socket.IO connections and maintain duplicated client-side interaction state.
+
+## Current limitations and improvement scope
+
+The application is now structurally cleaner than the original interview baseline, but the main production-shaping gaps are still these:
+
+* Real-time event delivery is still broadcast-oriented instead of room-scoped per user or post.
+* Socket registration is still process-local, so multi-instance deployment would need a shared adapter such as Redis.
+* Uploads still use local disk storage instead of object storage and CDN delivery.
+* Notifications are still created inline in request handlers rather than through async jobs or an event bus.
+* Comment pagination is split from feed reads, but replies are still hydrated together with each loaded top-level comment page.
+* The frontend request helper is intentionally lightweight and does not yet replace a full query/cache library.
+
+The next improvements with the highest return are room-based Socket.IO delivery, Redis-backed realtime infrastructure, object storage for uploads, and async notification processing.
 
 ## Recommended reading order
 
