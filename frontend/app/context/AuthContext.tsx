@@ -68,6 +68,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       localStorage.removeItem("token");
       setToken(null);
+      setUser(null);
+      setNotifications([]);
+      setUnread(0);
       console.error("Failed to fetch user", e);
     } finally {
       setLoading(false);
@@ -106,6 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
+    setNotifications([]);
+    setUnread(0);
     router.push("/login");
   };
 

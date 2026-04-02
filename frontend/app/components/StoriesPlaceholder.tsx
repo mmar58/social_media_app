@@ -1,13 +1,14 @@
 "use client";
 
 import React from "react";
+import { assetUrl } from "../lib/assets";
 
 export default function StoriesPlaceholder() {
   const stories = [
-    { name: "Your Story", isOwn: true, img: "/assets/images/card_ppl1.png" },
-    { name: "Ryan Roslansky", isOwn: false, img: "/assets/images/card_ppl2.png" },
-    { name: "Ryan Roslansky", isOwn: false, img: "/assets/images/card_ppl3.png" },
-    { name: "Ryan Roslansky", isOwn: false, img: "/assets/images/card_ppl4.png" },
+    { name: "Your Story", isOwn: true, img: assetUrl("/assets/images/card_ppl1.png") },
+    { name: "Ryan Roslansky", isOwn: false, img: assetUrl("/assets/images/card_ppl2.png") },
+    { name: "Ryan Roslansky", isOwn: false, img: assetUrl("/assets/images/card_ppl3.png") },
+    { name: "Ryan Roslansky", isOwn: false, img: assetUrl("/assets/images/card_ppl4.png") },
   ];
 
   const mobileStories = [
@@ -64,7 +65,7 @@ export default function StoriesPlaceholder() {
                     <p className="_feed_inner_pulic_story_para">{story.name}</p>
                   </div>
                   <div className="_feed_inner_public_mini">
-                    <img src="/assets/images/mini_pic.png" alt="Mini" className="_public_mini_img" />
+                    <img src={assetUrl("/assets/images/mini_pic.png")} alt="Mini" className="_public_mini_img" />
                   </div>
                 </div>
               </div>
@@ -81,7 +82,7 @@ export default function StoriesPlaceholder() {
             <li className="_feed_inner_ppl_card_area_item">
               <a href="#0" className="_feed_inner_ppl_card_area_link">
                 <div className="_feed_inner_ppl_card_area_story">
-                  <img src="/assets/images/mobile_story_img.png" alt="Your Story" className="_card_story_img" />
+                  <img src={assetUrl("/assets/images/mobile_story_img.png")} alt="Your Story" className="_card_story_img" />
                   <div className="_feed_inner_ppl_btn">
                     <button className="_feed_inner_ppl_btn_link" type="button">
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 12 12">
@@ -100,7 +101,7 @@ export default function StoriesPlaceholder() {
                 <a href="#0" className="_feed_inner_ppl_card_area_link">
                   <div className={s.active ? "_feed_inner_ppl_card_area_story_active" : "_feed_inner_ppl_card_area_story_inactive"}>
                     <img
-                      src={s.active ? "/assets/images/mobile_story_img1.png" : "/assets/images/mobile_story_img2.png"}
+                      src={s.active ? assetUrl("/assets/images/mobile_story_img1.png") : assetUrl("/assets/images/mobile_story_img2.png")}
                       alt={s.name}
                       className="_card_story_img1"
                     />

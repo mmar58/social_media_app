@@ -7,6 +7,7 @@ import { usePosts } from "../context/PostContext";
 import NotificationPostModal from "./NotificationPostModal";
 import { apiUrl } from "../lib/api";
 import { requestJson } from "../lib/request";
+import { assetUrl } from "../lib/assets";
 
 interface HeaderProps {
   searchQuery?: string;
@@ -100,7 +101,7 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
         <div className="container _custom_container">
           <div className="_logo_wrap">
             <Link className="navbar-brand" href="/feed">
-              <img src="/assets/images/logo.svg" alt="Buddy Script" className="_nav_logo" />
+              <img src={assetUrl("/assets/images/logo.svg")} alt="Buddy Script" className="_nav_logo" />
             </Link>
           </div>
 
@@ -254,7 +255,7 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
                               >
                                 <div className="_notification_image">
                                   <img
-                                    src={notification.senderProfile || "/assets/images/profile.png"}
+                                    src={notification.senderProfile || assetUrl("/assets/images/profile.png")}
                                     alt={notification.senderName}
                                     className="_notify_img"
                                   />
@@ -293,7 +294,7 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
                   style={{ cursor: "pointer", border: "none", background: "transparent", padding: 0, display: "flex", alignItems: "center" }}
                 >
                   <div className="_header_nav_profile_image">
-                    <img src={user.profile_picture || "/assets/images/profile.png"} alt="Profile" className="_nav_profile_img" style={{ borderRadius: "50%", objectFit: "cover" }} />
+                    <img src={user.profile_picture || assetUrl("/assets/images/profile.png")} alt="Profile" className="_nav_profile_img" style={{ borderRadius: "50%", objectFit: "cover" }} />
                   </div>
                   <div className="_header_nav_dropdown">
                     <p className="_header_nav_para">{user.first_name} {user.last_name}</p>
@@ -309,7 +310,7 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
                   <div className="_nav_profile_dropdown _profile_dropdown show" style={{ display: "block", right: 0, position: "absolute", top: "100%", zIndex: 99 }}>
                     <div className="_nav_profile_dropdown_info">
                       <div className="_nav_profile_dropdown_image">
-                        <img src={user.profile_picture || "/assets/images/profile.png"} alt="Profile" className="_nav_drop_img" style={{ borderRadius: "50%", objectFit: "cover" }} />
+                        <img src={user.profile_picture || assetUrl("/assets/images/profile.png")} alt="Profile" className="_nav_drop_img" style={{ borderRadius: "50%", objectFit: "cover" }} />
                       </div>
                       <div className="_nav_profile_dropdown_info_txt">
                         <h4 className="_nav_dropdown_title">{user.first_name} {user.last_name}</h4>
@@ -357,7 +358,7 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
                   <div className="_header_mobile_menu_top_inner">
                     <div className="_header_mobile_menu_logo">
                       <Link href="/feed">
-                        <img src="/assets/images/logo.svg" alt="Buddy Script" className="_nav_logo" />
+                        <img src={assetUrl("/assets/images/logo.svg")} alt="Buddy Script" className="_nav_logo" />
                       </Link>
                     </div>
                     <div className="_header_mobile_menu_right">

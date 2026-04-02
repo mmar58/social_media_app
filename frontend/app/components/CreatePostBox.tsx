@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { assetUrl } from "../lib/assets";
 
 interface CreatePostBoxProps {
   onPost: (content: string, visibility: string, image?: File) => void;
@@ -44,7 +45,7 @@ export default function CreatePostBox({ onPost }: CreatePostBoxProps) {
       <div className="_feed_inner_text_area_box">
         <div className="_feed_inner_text_area_box_image">
           <img
-            src={user?.profile_picture || "/assets/images/txt_img.png"}
+            src={user?.profile_picture || assetUrl("/assets/images/txt_img.png")}
             alt="You"
             className="_txt_img"
             style={{ borderRadius: "50%", objectFit: "cover", width: "40px", height: "40px" }}

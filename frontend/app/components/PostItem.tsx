@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { mediaUrl } from "../lib/api";
+import { assetUrl } from "../lib/assets";
 
 export default function PostItem({
   post,
@@ -87,7 +88,7 @@ export default function PostItem({
           <div className="_feed_inner_timeline_post_box">
             <div className="_feed_inner_timeline_post_box_image">
               <img
-                src={post.authorProfilePicture || "/assets/images/post_img.png"}
+                src={post.authorProfilePicture || assetUrl("/assets/images/post_img.png")}
                 alt=""
                 className="_post_img"
                 style={{ borderRadius: "50%", objectFit: "cover", width: "44px", height: "44px" }}
@@ -140,7 +141,7 @@ export default function PostItem({
           {post.likers && post.likers.slice(0, 8).map((liker: any, i: number) => (
             <img
               key={liker.userId ?? i}
-              src={liker.profile_picture || "/assets/images/react_img1.png"}
+              src={liker.profile_picture || assetUrl("/assets/images/react_img1.png")}
               alt={liker.name || ""}
               title={liker.name || ""}
               className={i === 0 ? "_react_img1" : "_react_img _rect_img_mbl_none"}
@@ -219,7 +220,7 @@ export default function PostItem({
             <div className="_feed_inner_comment_box_content">
               <div className="_feed_inner_comment_box_content_image">
                 <img
-                  src={user?.profile_picture || "/assets/images/comment_img.png"}
+                  src={user?.profile_picture || assetUrl("/assets/images/comment_img.png")}
                   alt=""
                   className="_comment_img"
                   style={{ borderRadius: "50%", objectFit: "cover" }}
@@ -268,7 +269,7 @@ export default function PostItem({
                 <div className="_comment_image">
                   <a href="#0" className="_comment_image_link">
                     <img
-                      src={c.authorProfilePicture || "/assets/images/txt_img.png"}
+                      src={c.authorProfilePicture || assetUrl("/assets/images/txt_img.png")}
                       alt=""
                       className="_comment_img1"
                       style={{ borderRadius: "50%", objectFit: "cover" }}
@@ -359,7 +360,7 @@ export default function PostItem({
                             style={{ marginBottom: "10px", padding: 0, marginTop: "10px", scrollMarginTop: "120px" }}
                           >
                             <div className="_comment_image">
-                              <img src={reply.authorProfilePicture || "/assets/images/txt_img.png"} alt="" className="_comment_img1" style={{ borderRadius: "50%", objectFit: "cover", width: "24px", height: "24px" }} />
+                              <img src={reply.authorProfilePicture || assetUrl("/assets/images/txt_img.png")} alt="" className="_comment_img1" style={{ borderRadius: "50%", objectFit: "cover", width: "24px", height: "24px" }} />
                             </div>
                             <div
                               className="_comment_area"

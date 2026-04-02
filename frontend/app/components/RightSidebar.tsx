@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
+import { assetUrl } from "../lib/assets";
 
 export default function RightSidebar() {
   const youMightLike = {
     name: "Radovan SkillArena",
     role: "Founder & CEO at Trophy",
-    img: "/assets/images/Avatar.png",
+    img: assetUrl("/assets/images/Avatar.png"),
   };
 
   const friends = [
@@ -81,7 +82,7 @@ export default function RightSidebar() {
                 <div className="_feed_right_inner_area_card_ppl_box">
                   <div className="_feed_right_inner_area_card_ppl_image">
                     <a href="#0">
-                      <img src={`/assets/images/${friend.img}`} alt={friend.name} className="_box_ppl_img" />
+                      <img src={assetUrl(`/assets/images/${friend.img}`)} alt={friend.name} className="_box_ppl_img" />
                     </a>
                   </div>
                   <div className="_feed_right_inner_area_card_ppl_txt">

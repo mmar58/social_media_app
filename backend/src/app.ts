@@ -11,13 +11,40 @@ import postRoutes from "./routes/posts";
 export function createApp() {
   const app = express();
   const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
-  app.use(cors({ origin: frontendOrigin, credentials: true }));
+
+  const allowedOrigins = new Set([
+    frontendOrigin,
+    "http://localhost",
+    "https://localhost",
+    "http://127.0.0.1",
+    "https://127.0.0.1",
+  ]);
+
+  const corsOrigin = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    try {
+      const parsed = new URL(origin);
+      if (allowedOrigins.has(origin) || parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+        callback(null, true);
+        return;
+      }
+    } catch {
+    }
+
+    callback(new Error(`CORS blocked for origin ${origin}`));
+  };
+
+  app.use(cors({ origin: corsOrigin, credentials: true }));
   app.use(express.json());
   app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
   const server = http.createServer(app);
   const io = new Server(server, {
-    cors: { origin: frontendOrigin, credentials: true },
+    cors: { origin: corsOrigin, credentials: true },
   });
 
   app.use("/api/auth", authRoutes);

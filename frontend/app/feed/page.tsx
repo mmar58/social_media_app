@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { usePosts } from "../context/PostContext";
 import Header from "../components/Header";
@@ -12,12 +12,13 @@ import LeftSidebar from "../components/LeftSidebar";
 import RightSidebar from "../components/RightSidebar";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function FeedPage() {
+function FeedPageContent() {
   const { user, loading, token } = useAuth();
   const { feedPosts, hasMorePosts, loadingFeed, loadingMorePosts, fetchFeed, loadMoreFeed, createPost, likePost, addComment, likeComment, replyToComment, loadPostComments, loadMorePostComments } = usePosts();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
+  const [feedError, setFeedError] = useState<string>("");
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [jumpHandled, setJumpHandled] = useState<string | null>(null);
 
@@ -37,13 +38,17 @@ export default function FeedPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login");
+      router.replace("/login");
     }
   }, [loading, router, user]);
 
   useEffect(() => {
     if (!user || !token) return;
-    fetchFeed({ search: searchQuery, reset: true }).catch((error) => console.error(error));
+    setFeedError("");
+    fetchFeed({ search: searchQuery, reset: true }).catch((error) => {
+      console.error(error);
+      setFeedError(error instanceof Error ? error.message : "Failed to load feed");
+    });
   }, [fetchFeed, searchQuery, token, user]);
 
   const handleSearch = (query: string) => {
@@ -104,8 +109,12 @@ export default function FeedPage() {
     return () => window.clearTimeout(timeoutId);
   }, [feedPosts, jumpHandled, jumpParam, jumpTarget]);
 
-  if (loading || !user || loadingFeed) {
+  if (loading) {
     return <Loader />;
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -128,6 +137,18 @@ export default function FeedPage() {
                       <StoriesPlaceholder />
 
                       <CreatePostBox onPost={createPost} />
+
+                      {loadingFeed && (
+                        <div className="alert alert-light" role="status" style={{ marginBottom: "16px" }}>
+                          Loading feed...
+                        </div>
+                      )}
+
+                      {feedError && (
+                        <div className="alert alert-danger" role="alert" style={{ marginBottom: "16px" }}>
+                          {feedError}
+                        </div>
+                      )}
 
                       <div className="posts-container">
                         {feedPosts.map((post) => (
@@ -172,5 +193,13 @@ export default function FeedPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function FeedPage() {
+  return (
+    <Suspense fallback={<Loader />}>
+      <FeedPageContent />
+    </Suspense>
   );
 }

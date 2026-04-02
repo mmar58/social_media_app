@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { assetUrl } from "../lib/assets";
 
 export default function LeftSidebar() {
   return (
@@ -103,7 +104,7 @@ export default function LeftSidebar() {
               <div className="_left_inner_area_suggest_info_box">
                 <div className="_left_inner_area_suggest_info_image">
                   <a href="#0">
-                    <img src={`/assets/images/${person.img}`} alt={person.name} className={person.imgClass} />
+                    <img src={assetUrl(`/assets/images/${person.img}`)} alt={person.name} className={person.imgClass} />
                   </a>
                 </div>
                 <div className="_left_inner_area_suggest_info_txt">
@@ -132,7 +133,7 @@ export default function LeftSidebar() {
             <div className="_left_inner_event_card_link" key={i}>
               <div className="_left_inner_event_card">
                 <div className="_left_inner_event_card_iamge">
-                  <a href="#0"><img src="/assets/images/feed_event1.png" alt="Event" className="_card_img" /></a>
+                  <a href="#0"><img src={assetUrl("/assets/images/feed_event1.png")} alt="Event" className="_card_img" /></a>
                 </div>
                 <div className="_left_inner_event_card_content">
                   <div className="_left_inner_card_date">

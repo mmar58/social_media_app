@@ -7,6 +7,7 @@ interface RequestJsonOptions {
   retries?: number;
   cacheTtlMs?: number;
   dedupeKey?: string;
+  timeoutMs?: number;
 }
 
 const inflightGetRequests = new Map<string, Promise<unknown>>();
@@ -52,6 +53,7 @@ export async function requestJson<T>(url: string, init?: RequestInit, options: R
   const retries = options.retries ?? (method === "GET" ? 2 : 0);
   const cacheKey = buildRequestKey(url, init, options.dedupeKey);
   const cacheTtlMs = options.cacheTtlMs ?? 0;
+  const timeoutMs = options.timeoutMs ?? 1500;
 
   if (method === "GET") {
     const cached = responseCache.get(cacheKey);
@@ -69,9 +71,16 @@ export async function requestJson<T>(url: string, init?: RequestInit, options: R
     let lastError: unknown;
 
     for (let attempt = 0; attempt <= retries; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
       try {
-        const response = await fetch(url, init);
+        const response = await fetch(url, {
+          ...init,
+          signal: controller.signal,
+        });
         const data = await response.json().catch(() => null);
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           const message = data?.error || data?.message || "Request failed";
@@ -95,9 +104,15 @@ export async function requestJson<T>(url: string, init?: RequestInit, options: R
 
         return data as T;
       } catch (error) {
-        lastError = error;
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === "AbortError") {
+          lastError = new Error(`Request timed out after ${timeoutMs}ms`);
+        } else {
+          lastError = error;
+        }
+
         if (attempt >= retries) {
-          throw error;
+          throw lastError;
         }
       }
     }
