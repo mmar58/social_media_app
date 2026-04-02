@@ -1,0 +1,118 @@
+{
+  "baseUrl": "http://localhost:5000",
+  "createdAt": "2026-04-02T04:33:00.048Z",
+  "users": [
+    {
+      "first_name": "Load01",
+      "last_name": "User",
+      "email": "social-load+1775104378796-01@example.com",
+      "password": "Passw0rd!",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MywiZW1haWwiOiJzb2NpYWwtbG9hZCsxNzc1MTA0Mzc4Nzk2LTAxQGV4YW1wbGUuY29tIiwiZmlyc3RfbmFtZSI6IkxvYWQwMSIsImxhc3RfbmFtZSI6IlVzZXIiLCJwcm9maWxlX3BpY3R1cmUiOiJodHRwczovL3VpLWF2YXRhcnMuY29tL2FwaS8_bmFtZT1Mb2FkMDElMjBVc2VyJmJhY2tncm91bmQ9cmFuZG9tIiwiaWF0IjoxNzc1MTA0Mzc5LCJleHAiOjE3NzU3MDkxNzl9.T8qTqTciTtIYr73K8RD3ahHbK-iza8DGvADNf0kjmDg",
+      "user": {
+        "id": 3,
+        "first_name": "Load01",
+        "last_name": "User",
+        "email": "social-load+1775104378796-01@example.com",
+        "profile_picture": "https://ui-avatars.com/api/?name=Load01%20User&background=random"
+      }
+    },
+    {
+      "first_name": "Load02",
+      "last_name": "User",
+      "email": "social-load+1775104378796-02@example.com",
+      "password": "Passw0rd!",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NCwiZW1haWwiOiJzb2NpYWwtbG9hZCsxNzc1MTA0Mzc4Nzk2LTAyQGV4YW1wbGUuY29tIiwiZmlyc3RfbmFtZSI6IkxvYWQwMiIsImxhc3RfbmFtZSI6IlVzZXIiLCJwcm9maWxlX3BpY3R1cmUiOiJodHRwczovL3VpLWF2YXRhcnMuY29tL2FwaS8_bmFtZT1Mb2FkMDIlMjBVc2VyJmJhY2tncm91bmQ9cmFuZG9tIiwiaWF0IjoxNzc1MTA0Mzc5LCJleHAiOjE3NzU3MDkxNzl9.1dVwO_VK__HJ5ubt4dcm6s0vkxtsyGtwcLwGPVH0-Wk",
+      "user": {
+        "id": 4,
+        "first_name": "Load02",
+        "last_name": "User",
+        "email": "social-load+1775104378796-02@example.com",
+        "profile_picture": "https://ui-avatars.com/api/?name=Load02%20User&background=random"
+      }
+    },
+    {
+      "first_name": "Load03",
+      "last_name": "User",
+      "email": "social-load+1775104378796-03@example.com",
+      "password": "Passw0rd!",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NSwiZW1haWwiOiJzb2NpYWwtbG9hZCsxNzc1MTA0Mzc4Nzk2LTAzQGV4YW1wbGUuY29tIiwiZmlyc3RfbmFtZSI6IkxvYWQwMyIsImxhc3RfbmFtZSI6IlVzZXIiLCJwcm9maWxlX3BpY3R1cmUiOiJodHRwczovL3VpLWF2YXRhcnMuY29tL2FwaS8_bmFtZT1Mb2FkMDMlMjBVc2VyJmJhY2tncm91bmQ9cmFuZG9tIiwiaWF0IjoxNzc1MTA0Mzc5LCJleHAiOjE3NzU3MDkxNzl9.Wb9yHRhDjJeE-6H0AF4BqNfJyB4Fne4DAKwQPuhEpZE",
+      "user": {
+        "id": 5,
+        "first_name": "Load03",
+        "last_name": "User",
+        "email": "social-load+1775104378796-03@example.com",
+        "profile_picture": "https://ui-avatars.com/api/?name=Load03%20User&background=random"
+      }
+    },
+    {
+      "first_name": "Load04",
+      "last_name": "User",
+      "email": "social-load+1775104378796-04@example.com",
+      "password": "Passw0rd!",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NiwiZW1haWwiOiJzb2NpYWwtbG9hZCsxNzc1MTA0Mzc4Nzk2LTA0QGV4YW1wbGUuY29tIiwiZmlyc3RfbmFtZSI6IkxvYWQwNCIsImxhc3RfbmFtZSI6IlVzZXIiLCJwcm9maWxlX3BpY3R1cmUiOiJodHRwczovL3VpLWF2YXRhcnMuY29tL2FwaS8_bmFtZT1Mb2FkMDQlMjBVc2VyJmJhY2tncm91bmQ9cmFuZG9tIiwiaWF0IjoxNzc1MTA0Mzc5LCJleHAiOjE3NzU3MDkxNzl9.eswBbMekVzM-baIp5vARrF3UzMqqmR4K58yzqDCJhb4",
+      "user": {
+        "id": 6,
+        "first_name": "Load04",
+        "last_name": "User",
+        "email": "social-load+1775104378796-04@example.com",
+        "profile_picture": "https://ui-avatars.com/api/?name=Load04%20User&background=random"
+      }
+    },
+    {
+      "first_name": "Load05",
+      "last_name": "User",
+      "email": "social-load+1775104378796-05@example.com",
+      "password": "Passw0rd!",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NywiZW1haWwiOiJzb2NpYWwtbG9hZCsxNzc1MTA0Mzc4Nzk2LTA1QGV4YW1wbGUuY29tIiwiZmlyc3RfbmFtZSI6IkxvYWQwNSIsImxhc3RfbmFtZSI6IlVzZXIiLCJwcm9maWxlX3BpY3R1cmUiOiJodHRwczovL3VpLWF2YXRhcnMuY29tL2FwaS8_bmFtZT1Mb2FkMDUlMjBVc2VyJmJhY2tncm91bmQ9cmFuZG9tIiwiaWF0IjoxNzc1MTA0Mzc5LCJleHAiOjE3NzU3MDkxNzl9.kgHorFV6DFNOH1HjlKk2qcDO8g51_ktNSsaojNwkQOc",
+      "user": {
+        "id": 7,
+        "first_name": "Load05",
+        "last_name": "User",
+        "email": "social-load+1775104378796-05@example.com",
+        "profile_picture": "https://ui-avatars.com/api/?name=Load05%20User&background=random"
+      }
+    },
+    {
+      "first_name": "Load06",
+      "last_name": "User",
+      "email": "social-load+1775104378796-06@example.com",
+      "password": "Passw0rd!",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OCwiZW1haWwiOiJzb2NpYWwtbG9hZCsxNzc1MTA0Mzc4Nzk2LTA2QGV4YW1wbGUuY29tIiwiZmlyc3RfbmFtZSI6IkxvYWQwNiIsImxhc3RfbmFtZSI6IlVzZXIiLCJwcm9maWxlX3BpY3R1cmUiOiJodHRwczovL3VpLWF2YXRhcnMuY29tL2FwaS8_bmFtZT1Mb2FkMDYlMjBVc2VyJmJhY2tncm91bmQ9cmFuZG9tIiwiaWF0IjoxNzc1MTA0Mzc5LCJleHAiOjE3NzU3MDkxNzl9.oLe27HwtWBPFbRpg-Xyaz2o_gZAFBe9gx3LI7fa1B7I",
+      "user": {
+        "id": 8,
+        "first_name": "Load06",
+        "last_name": "User",
+        "email": "social-load+1775104378796-06@example.com",
+        "profile_picture": "https://ui-avatars.com/api/?name=Load06%20User&background=random"
+      }
+    },
+    {
+      "first_name": "Load07",
+      "last_name": "User",
+      "email": "social-load+1775104378796-07@example.com",
+      "password": "Passw0rd!",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OSwiZW1haWwiOiJzb2NpYWwtbG9hZCsxNzc1MTA0Mzc4Nzk2LTA3QGV4YW1wbGUuY29tIiwiZmlyc3RfbmFtZSI6IkxvYWQwNyIsImxhc3RfbmFtZSI6IlVzZXIiLCJwcm9maWxlX3BpY3R1cmUiOiJodHRwczovL3VpLWF2YXRhcnMuY29tL2FwaS8_bmFtZT1Mb2FkMDclMjBVc2VyJmJhY2tncm91bmQ9cmFuZG9tIiwiaWF0IjoxNzc1MTA0Mzc5LCJleHAiOjE3NzU3MDkxNzl9.YSER251qNJs7gyVKn4BYVw8KJ3VqmjFltJCzAO9IPpk",
+      "user": {
+        "id": 9,
+        "first_name": "Load07",
+        "last_name": "User",
+        "email": "social-load+1775104378796-07@example.com",
+        "profile_picture": "https://ui-avatars.com/api/?name=Load07%20User&background=random"
+      }
+    },
+    {
+      "first_name": "Load08",
+      "last_name": "User",
+      "email": "social-load+1775104378796-08@example.com",
+      "password": "Passw0rd!",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTAsImVtYWlsIjoic29jaWFsLWxvYWQrMTc3NTEwNDM3ODc5Ni0wOEBleGFtcGxlLmNvbSIsImZpcnN0X25hbWUiOiJMb2FkMDgiLCJsYXN0X25hbWUiOiJVc2VyIiwicHJvZmlsZV9waWN0dXJlIjoiaHR0cHM6Ly91aS1hdmF0YXJzLmNvbS9hcGkvP25hbWU9TG9hZDA4JTIwVXNlciZiYWNrZ3JvdW5kPXJhbmRvbSIsImlhdCI6MTc3NTEwNDM4MCwiZXhwIjoxNzc1NzA5MTgwfQ.kPAuuGmfE04OLpQnuT6p4X_ccfpuU_1PFEjRT5tsAJs",
+      "user": {
+        "id": 10,
+        "first_name": "Load08",
+        "last_name": "User",
+        "email": "social-load+1775104378796-08@example.com",
+        "profile_picture": "https://ui-avatars.com/api/?name=Load08%20User&background=random"
+      }
+    }
+  ]
+}

@@ -109,6 +109,33 @@ cd frontend
 pnpm test
 ```
 
+## Multi-user activity scripts
+
+For local real-world effect testing against the running backend, the backend package now includes CLI scripts that can register users, log them in, and generate delayed social activity.
+
+Typical flow:
+
+```bash
+cd backend
+pnpm sim:register-users --count 8
+pnpm sim:login-users
+pnpm sim:activity --iterations 0 --delay-ms 2000 --jitter-ms 1500 --image-ratio 0.35
+```
+
+What they do:
+
+* `pnpm sim:register-users`: creates multiple users and saves credentials plus tokens to `backend/scripts/social-load/users.generated.json`.
+* `pnpm sim:login-users`: refreshes tokens for the saved users.
+* `pnpm sim:activity`: continuously creates posts, comments, replies, and likes with a delay until stopped, or for a fixed number of actions.
+
+Useful flags:
+
+* `--base-url http://localhost:5000` to target a non-default backend.
+* `--iterations 0` to run endlessly until `Ctrl+C`.
+* `--public-ratio 0.85` to control how many generated posts are public.
+* `--image-ratio 0.35` to control how many generated posts include an uploaded image.
+* `--persist-logins` to rewrite the saved user file with fresh tokens before activity starts.
+
 ## Documentation map
 
 * `docs/ARCHITECTURE.md`: system structure, request flow, and runtime boundaries.

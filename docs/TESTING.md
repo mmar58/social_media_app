@@ -33,6 +33,16 @@ pnpm test
 
 Watch mode is also available in both apps with `pnpm test:watch`.
 
+For manual multi-user verification against a live backend, use the backend simulator scripts:
+
+```bash
+cd backend
+pnpm sim:register-users --count 6
+pnpm sim:activity --iterations 0 --delay-ms 2500 --image-ratio 0.25
+```
+
+Those scripts are intended for observing real-time feed, notification, comment, and reply behavior across multiple browser sessions or devices.
+
 ## What is currently covered
 
 ### Backend coverage
@@ -156,6 +166,7 @@ Use these rules for this repository:
 * Every new notification type should have a backend creation test and a detail-resolution test if applicable.
 * Every new interactive frontend component should have at least one user-path test.
 * Every bug fix should add a regression test if the path is testable.
+* Manual simulator scripts can supplement testing for cross-session realtime behavior, but they do not replace automated regression coverage.
 
 ## Suggested next test investments
 
