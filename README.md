@@ -71,7 +71,8 @@ social_app/
 1. Create a MySQL database named `social_app`.
 2. Run the schema in `backend/schema.sql`.
 3. Copy `backend/.env.example` to `backend/.env` and adjust values.
-4. Install dependencies and start the API:
+4. If your MySQL provider requires TLS, set `DB_SSL_CA` or `DB_SSL_CA_PATH` in `backend/.env`.
+5. Install dependencies and start the API:
 
 ```bash
 cd backend
