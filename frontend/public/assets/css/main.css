@@ -208,7 +208,7 @@
 
 /*------Login Css --------*/
 ._social_login_wrapper {
-    padding: 100px 0px;
+    /* padding: 100px 0px; */
     background: var(--bg1);
     position: relative;
     z-index: 1;
@@ -428,7 +428,7 @@
 }
 
 ._social_registration_wrapper {
-    padding: 100px 0px;
+    /* padding: 100px 0px; */
     background: var(--bg1);
     position: relative;
     z-index: 1;

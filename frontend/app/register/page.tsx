@@ -35,7 +35,7 @@ export default function Register() {
       if (res.ok) {
         login(data.user);
       } else {
-        setError(data.message || "Registration failed");
+        setError(data.error || data.message || (data.errors && data.errors[0]) || "Registration failed");
       }
     } catch (err: any) {
       setError(err.message);

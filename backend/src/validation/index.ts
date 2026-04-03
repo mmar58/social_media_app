@@ -9,6 +9,13 @@ function validatePart(schema: ZodTypeAny, key: "body" | "query" | "params") {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req[key]);
     if (!result.success) {
+      // Log validation failures to help debugging client 400s
+      try {
+        console.warn(`[validation] ${req.method} ${req.originalUrl} - ${formatError(result.error)}`);
+      } catch (e) {
+        // ignore logging errors
+      }
+
       return res.status(400).json({ error: formatError(result.error) });
     }
 
