@@ -17,7 +17,9 @@ export function createApp() {
     "http://localhost",
     "https://localhost",
     "http://127.0.0.1",
-    "https://127.0.0.1",
+    "http://192.168.0.2",
+    "https://socialapp.anzdevelopers.com",
+    "http://socailapi.anzdevelopers.com"
   ]);
 
   const corsOrigin = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
