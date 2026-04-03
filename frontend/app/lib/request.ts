@@ -21,12 +21,9 @@ function buildRequestKey(url: string, init?: RequestInit, explicitKey?: string) 
   if (explicitKey) return explicitKey;
 
   const method = init?.method || "GET";
-  let authHeader = "";
-  if (init?.headers && typeof init.headers === "object" && !Array.isArray(init.headers) && "Authorization" in init.headers) {
-    authHeader = String((init.headers as Record<string, string>).Authorization || "");
-  }
+  const credentials = init?.credentials || "same-origin";
 
-  return `${method}:${url}:${authHeader}`;
+  return `${method}:${url}:${credentials}`;
 }
 
 export function invalidateRequestCache(match?: string | RegExp | ((key: string) => boolean)) {
@@ -77,6 +74,7 @@ export async function requestJson<T>(url: string, init?: RequestInit, options: R
       try {
         const response = await fetch(url, {
           ...init,
+          credentials: init?.credentials ?? "include",
           signal: controller.signal,
         });
         const data = await response.json().catch(() => null);

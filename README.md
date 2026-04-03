@@ -9,8 +9,8 @@ The codebase is split into two runtime applications:
 
 ## What the app currently does
 
-* Registers and logs users in with JWT-based authentication.
-* Persists the auth token in the browser and restores the user on reload.
+* Registers and logs users in with JWT-based authentication stored in an `httpOnly` cookie.
+* Restores the signed-in user on reload through the cookie-backed session.
 * Loads a cursor-paginated feed of public posts plus the signed-in user's private posts.
 * Creates posts with optional image upload and public/private visibility.
 * Rejects non-image uploads and images larger than 5 MB on post creation.
@@ -119,7 +119,7 @@ Typical flow:
 cd backend
 pnpm sim:register-users --count 8
 pnpm sim:login-users
-pnpm sim:activity --iterations 0 --delay-ms 2000 --jitter-ms 1500 --image-ratio 0.35
+pnpm sim:activity --iterations 0 --delay-ms 2000 --jitter-ms 1500 --image-ratio .1
 ```
 
 What they do:

@@ -9,7 +9,6 @@ const replace = vi.fn();
 const authState = {
   user: null,
   loading: false,
-  token: null,
 };
 
 vi.mock("next/navigation", () => ({

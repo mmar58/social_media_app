@@ -16,7 +16,7 @@ Use this file when changing anything under `frontend/`.
 
 - `app/layout.tsx` loads the global providers and the legacy stylesheet bundle from `public/assets/css/`.
 - `app/page.tsx` immediately redirects `/` to `/feed`.
-- `app/context/AuthContext.tsx` owns the authenticated user, token restoration, notifications, unread count, and the main Socket.IO client.
+- `app/context/AuthContext.tsx` owns the authenticated user, cookie-backed session restoration, notifications, unread count, and the main Socket.IO client.
 - `app/context/PostContext.tsx` owns feed state, post hydration in the client, likes, comments, replies, comment pagination, and socket-driven feed updates.
 - `app/components/Header.tsx` owns search input behavior plus the notification dropdown and notification detail loading.
 - `app/components/NotificationPostModal.tsx` renders notification-focused post details by reusing `PostContext` state.
@@ -41,7 +41,7 @@ Use this file when changing anything under `frontend/`.
 
 ## Auth And Routing
 
-- Authentication is client-managed. The token is stored in `localStorage`, restored through `GET /api/auth/me`, and used for authenticated API requests.
+- Authentication is cookie-backed. The backend sets an `httpOnly` auth cookie, `AuthContext` restores the session through `GET /api/auth/me`, and authenticated requests rely on `credentials: "include"`.
 - The feed route protects itself in the client and redirects unauthenticated users to `/login`.
 - Login and registration pages call `useAuth().login()` after successful API responses.
 

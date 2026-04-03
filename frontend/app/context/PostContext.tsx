@@ -68,7 +68,7 @@ function mergeUniqueComments(existingComments: any[], nextComments: any[]) {
 }
 
 export function PostProvider({ children }: { children: React.ReactNode }) {
-  const { token, user, socket } = useAuth();
+  const { user, socket } = useAuth();
   const [postsById, setPostsById] = useState<Record<number, PostRecord>>({});
   const [feedPostIds, setFeedPostIds] = useState<number[]>([]);
   const [feedNextCursor, setFeedNextCursor] = useState<number | null>(null);
@@ -77,13 +77,13 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
 
   useEffect(() => {
-    if (!token || !user) {
+    if (!user) {
       setPostsById({});
       setFeedPostIds([]);
       setFeedNextCursor(null);
       setHasMorePosts(false);
     }
-  }, [token, user]);
+  }, [user]);
 
   const upsertPosts = useCallback((posts: PostRecord[]) => {
     setPostsById((current) => {
@@ -105,7 +105,7 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
   }, [postsById]);
 
   const fetchFeed = useCallback(async (options: FetchFeedOptions = {}) => {
-    if (!token) return;
+    if (!user) return;
 
     const { search = "", reset = false } = options;
     const params = new URLSearchParams();
@@ -119,11 +119,9 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await requestJson<{ posts: PostRecord[]; nextCursor: number | null; hasMore: boolean }>(
         apiUrl(`/api/posts?${params.toString()}`),
+        undefined,
         {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-        {
-          dedupeKey: `feed:${search.trim()}`,
+          dedupeKey: `feed:${user.id}:${search.trim()}`,
           cacheTtlMs: 5000,
         }
       );
@@ -137,10 +135,10 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
         setLoadingFeed(false);
       }
     }
-  }, [token, upsertPosts]);
+  }, [upsertPosts, user]);
 
   const loadMoreFeed = useCallback(async (search = "") => {
-    if (!token || !feedNextCursor || !hasMorePosts) return;
+    if (!user || !feedNextCursor || !hasMorePosts) return;
 
     setLoadingMorePosts(true);
     try {
@@ -151,11 +149,9 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
 
       const data = await requestJson<{ posts: PostRecord[]; nextCursor: number | null; hasMore: boolean }>(
         apiUrl(`/api/posts?${params.toString()}`),
+        undefined,
         {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-        {
-          dedupeKey: `feed:${search.trim()}:cursor:${feedNextCursor}`,
+          dedupeKey: `feed:${user.id}:${search.trim()}:cursor:${feedNextCursor}`,
           cacheTtlMs: 5000,
         }
       );
@@ -167,10 +163,10 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoadingMorePosts(false);
     }
-  }, [feedNextCursor, hasMorePosts, token, upsertPosts]);
+  }, [feedNextCursor, hasMorePosts, upsertPosts, user]);
 
   const createPost = useCallback(async (content: string, visibility: string, image?: File) => {
-    if (!token) return;
+    if (!user) return;
 
     const formData = new FormData();
     formData.append("content", content);
@@ -179,7 +175,6 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
 
     const data = await requestJson<{ post: PostRecord }>(apiUrl("/api/posts"), {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
 
@@ -190,14 +185,13 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
     if (data.post.visibility === "public") {
       socket?.emit("new_post", data.post);
     }
-  }, [socket, token, upsertPost]);
+  }, [socket, upsertPost, user]);
 
   const likePost = useCallback(async (postId: number) => {
-    if (!token) return;
+    if (!user) return;
 
     const data = await requestJson<any>(apiUrl(`/api/posts/${postId}/like`), {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
     });
 
     setPostsById((current) => {
@@ -228,16 +222,15 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
     });
 
     socket?.emit("like_post", { postId, action: data.action });
-  }, [socket, token]);
+  }, [socket, user]);
 
   const addComment = useCallback(async (postId: number, content: string) => {
-    if (!token) return;
+    if (!user) return;
 
     const data = await requestJson<{ comment: any }>(apiUrl(`/api/posts/${postId}/comment`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ content }),
     });
@@ -265,14 +258,13 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
     });
 
     socket?.emit("new_comment", { postId, comment: data.comment });
-  }, [socket, token]);
+  }, [socket, user]);
 
   const likeComment = useCallback(async (postId: number, commentId: number) => {
-    if (!token) return;
+    if (!user) return;
 
     const data = await requestJson<any>(apiUrl(`/api/posts/${postId}/comments/${commentId}/like`), {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
     });
 
     setPostsById((current) => {
@@ -297,16 +289,15 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
     });
 
     socket?.emit("like_comment", { postId, commentId, action: data.action });
-  }, [socket, token]);
+  }, [socket, user]);
 
   const replyToComment = useCallback(async (postId: number, commentId: number, content: string) => {
-    if (!token) return;
+    if (!user) return;
 
     const data = await requestJson<{ reply: any }>(apiUrl(`/api/posts/${postId}/comments/${commentId}/reply`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ content }),
     });
@@ -332,10 +323,10 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
     });
 
     socket?.emit("reply_comment", { postId, commentId, reply: data.reply });
-  }, [socket, token]);
+  }, [socket, user]);
 
   const loadPostComments = useCallback(async (postId: number, options: { reset?: boolean } = {}) => {
-    if (!token) return;
+    if (!user) return;
 
     setPostsById((current) => ({
       ...current,
@@ -351,11 +342,9 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
 
       const data = await requestJson<{ comments: any[]; nextCursor: number | null; hasMore: boolean; totalComments: number }>(
         apiUrl(`/api/posts/${postId}/comments?${params.toString()}`),
+        undefined,
         {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-        {
-          dedupeKey: `post-comments:${postId}:first-page`,
+          dedupeKey: `post-comments:${user.id}:${postId}:first-page`,
           cacheTtlMs: 5000,
         }
       );
@@ -385,10 +374,10 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
       }));
       throw error;
     }
-  }, [token]);
+  }, [user]);
 
   const loadMorePostComments = useCallback(async (postId: number) => {
-    if (!token) return;
+    if (!user) return;
 
     const post = postsById[postId];
     if (!post?.commentsNextCursor || !post?.hasMoreComments || post?.commentsLoading) {
@@ -410,11 +399,9 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
 
       const data = await requestJson<{ comments: any[]; nextCursor: number | null; hasMore: boolean; totalComments: number }>(
         apiUrl(`/api/posts/${postId}/comments?${params.toString()}`),
+        undefined,
         {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-        {
-          dedupeKey: `post-comments:${postId}:cursor:${post.commentsNextCursor}`,
+          dedupeKey: `post-comments:${user.id}:${postId}:cursor:${post.commentsNextCursor}`,
           cacheTtlMs: 5000,
         }
       );
@@ -444,7 +431,7 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
       }));
       throw error;
     }
-  }, [postsById, token]);
+  }, [postsById, user]);
 
   useEffect(() => {
     if (!socket) return;

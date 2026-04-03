@@ -19,7 +19,6 @@ const mockSocket = {
 };
 
 const authContext = {
-  token: "test-token",
   user: {
     id: 1,
     first_name: "Taylor",

@@ -27,12 +27,13 @@ export default function Register() {
     try {
       const res = await fetch(apiUrl("/api/auth/register"), {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ first_name: firstName, last_name: lastName, email, password }),
       });
       const data = await res.json();
       if (res.ok) {
-        login(data.token, data.user);
+        login(data.user);
       } else {
         setError(data.message || "Registration failed");
       }

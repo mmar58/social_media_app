@@ -12,7 +12,6 @@ const authContext = {
     email: "taylor@example.com",
     profile_picture: "https://example.com/profile.png",
   },
-  token: "token-1",
   logout: vi.fn(),
   notifications: [
     {

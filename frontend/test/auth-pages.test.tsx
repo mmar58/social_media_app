@@ -32,7 +32,6 @@ describe("auth pages", () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        token: "token-1",
         user: { id: 1, first_name: "Alice", last_name: "Adams", email: "alice@example.com" },
       }),
     });
@@ -49,12 +48,13 @@ describe("auth pages", () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith("http://localhost:5000/api/auth/login", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: "alice@example.com", password: "password123" }),
       });
     });
 
-    expect(authContext.login).toHaveBeenCalledWith("token-1", {
+    expect(authContext.login).toHaveBeenCalledWith({
       id: 1,
       first_name: "Alice",
       last_name: "Adams",
@@ -87,7 +87,6 @@ describe("auth pages", () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        token: "token-2",
         user: { id: 2, first_name: "Bob", last_name: "Baker", email: "bob@example.com" },
       }),
     });
@@ -107,6 +106,7 @@ describe("auth pages", () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith("http://localhost:5000/api/auth/register", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           first_name: "Bob",
@@ -117,7 +117,7 @@ describe("auth pages", () => {
       });
     });
 
-    expect(authContext.login).toHaveBeenCalledWith("token-2", {
+    expect(authContext.login).toHaveBeenCalledWith({
       id: 2,
       first_name: "Bob",
       last_name: "Baker",

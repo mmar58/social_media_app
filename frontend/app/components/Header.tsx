@@ -15,7 +15,7 @@ interface HeaderProps {
 }
 
 export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
-  const { user, token, logout, notifications, unread, markAllRead, markRead } = useAuth();
+  const { user, logout, notifications, unread, markAllRead, markRead } = useAuth();
   const { upsertPost } = usePosts();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
@@ -70,16 +70,14 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
   };
 
   const handleNotificationOpen = async (notificationId: number) => {
-    if (!token) return;
+    if (!user) return;
 
     setPreviewLoading(true);
     setPreviewError(null);
 
     try {
       await markRead(notificationId);
-      const data = await requestJson<any>(apiUrl(`/api/notifications/${notificationId}/details`), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const data = await requestJson<any>(apiUrl(`/api/notifications/${notificationId}/details`));
 
       if (data.post) {
         upsertPost(data.post);

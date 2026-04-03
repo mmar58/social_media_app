@@ -8,6 +8,26 @@ import { loginSchema, registerSchema } from "../validation/schemas";
 
 const router = Router();
 
+function setAuthCookie(res: any, token: string) {
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+}
+
+function clearAuthCookie(res: any) {
+  res.cookie("token", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 0,
+    path: "/",
+  });
+}
+
 router.post("/register", validateBody(registerSchema), async (req, res) => {
   try {
     const { first_name, last_name, email, password } = req.body;
@@ -29,16 +49,9 @@ router.post("/register", validateBody(registerSchema), async (req, res) => {
     
     const token = jwt.sign({ id, email, first_name, last_name, profile_picture }, process.env.JWT_SECRET || "secret", { expiresIn: "7d" });
 
-    // Set secure httpOnly cookie for environments that support it
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-    });
+    setAuthCookie(res, token);
 
-    res.json({ token, user: { id, first_name, last_name, email, profile_picture } });
+    res.json({ user: { id, first_name, last_name, email, profile_picture } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -58,16 +71,10 @@ router.post("/login", validateBody(loginSchema), async (req, res) => {
       process.env.JWT_SECRET || "secret", 
       { expiresIn: "7d" }
     );
-    // set cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-    });
 
-    res.json({ token, user: { id: user.id, first_name: user.first_name, last_name: user.last_name, email: user.email, profile_picture: user.profile_picture } });
+    setAuthCookie(res, token);
+
+    res.json({ user: { id: user.id, first_name: user.first_name, last_name: user.last_name, email: user.email, profile_picture: user.profile_picture } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -75,7 +82,7 @@ router.post("/login", validateBody(loginSchema), async (req, res) => {
 
 // optional logout to clear httpOnly cookie
 router.post("/logout", (req, res) => {
-  res.cookie("token", "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 0, path: "/" });
+  clearAuthCookie(res);
   res.json({ success: true });
 });
 
@@ -93,17 +100,10 @@ router.get("/me", authenticate, async (req: AuthRequest, res) => {
       { expiresIn: "7d" }
     );
 
-    // refresh cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-    });
+    setAuthCookie(res, token);
 
     const safeUser = { id: user.id, first_name: user.first_name, last_name: user.last_name, email: user.email, profile_picture: user.profile_picture };
-    res.json({ token, user: safeUser });
+    res.json({ user: safeUser });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

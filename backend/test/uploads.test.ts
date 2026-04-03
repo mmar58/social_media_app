@@ -18,11 +18,20 @@ describe("uploads and validation", () => {
     resetMockDb();
   });
 
+  function getAuthCookie(response: request.Response) {
+    const cookieHeader = response.headers["set-cookie"]?.find((value) => value.startsWith("token="));
+    expect(cookieHeader).toBeTruthy();
+    return cookieHeader!.split(";")[0];
+  }
+
   async function registerUser(payload: { first_name: string; last_name: string; email: string; password: string }) {
     const { app } = createApp();
     const response = await request(app).post("/api/auth/register").send(payload);
     expect(response.status).toBe(200);
-    return response.body as { token: string; user: { id: number; email: string } };
+    return {
+      user: response.body.user as { id: number; email: string },
+      cookie: getAuthCookie(response),
+    };
   }
 
   it("rejects non-image uploads", async () => {
@@ -34,7 +43,7 @@ describe("uploads and validation", () => {
 
     const res = await request(app)
       .post("/api/posts")
-      .set("Authorization", `Bearer ${alice.token}`)
+      .set("Cookie", alice.cookie)
       .attach("image", tmpPath, { filename: "file.txt", contentType: "text/plain" })
       .field("content", "test")
       .field("visibility", "public");
@@ -55,7 +64,7 @@ describe("uploads and validation", () => {
 
     const res = await request(app)
       .post("/api/posts")
-      .set("Authorization", `Bearer ${alice.token}`)
+      .set("Cookie", alice.cookie)
       .attach("image", tmpPath, { filename: "big.jpg", contentType: "image/jpeg" })
       .field("content", "big file")
       .field("visibility", "public");

@@ -38,7 +38,7 @@ The main frontend files are:
 - `frontend/app/login/page.tsx`: login screen.
 - `frontend/app/register/page.tsx`: registration screen.
 - `frontend/app/feed/page.tsx`: authenticated feed screen.
-- `frontend/app/context/AuthContext.tsx`: user state, token state, notification state, and socket registration.
+- `frontend/app/context/AuthContext.tsx`: user state, cookie-backed session restoration, notification state, and socket registration.
 - `frontend/app/context/PostContext.tsx`: shared feed state, post mutation handlers, comment pagination, and socket-driven post updates.
 - `frontend/app/lib/api.ts`: environment-aware API, socket, and media URL helpers.
 - `frontend/app/lib/request.ts`: shared request helper with GET deduplication, short-lived caching, and retry support.
@@ -93,9 +93,9 @@ comments 1 --- * comments (reply chain via parent_id)
 
 1. The user submits login or registration in the frontend.
 2. The frontend calls `POST /api/auth/login` or `POST /api/auth/register`.
-3. The backend returns a JWT and user payload.
-4. `AuthContext` stores the token in `localStorage`, updates React state, and routes to `/feed`.
-5. On later page loads, `AuthContext` reads the token and validates it through `GET /api/auth/me`.
+3. The backend sets an `httpOnly` auth cookie and returns the user payload.
+4. `AuthContext` updates React state and routes to `/feed`.
+5. On later page loads, `AuthContext` restores the session through `GET /api/auth/me` with cookies included.
 
 ### Feed load flow
 

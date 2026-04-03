@@ -19,12 +19,13 @@ export default function Login() {
     try {
       const res = await fetch(apiUrl("/api/auth/login"), {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (res.ok) {
-        login(data.token, data.user);
+        login(data.user);
       } else {
         setError(data.message || "Login failed");
       }

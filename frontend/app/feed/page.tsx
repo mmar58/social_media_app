@@ -13,7 +13,7 @@ import RightSidebar from "../components/RightSidebar";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function FeedPageContent() {
-  const { user, loading, token } = useAuth();
+  const { user, loading } = useAuth();
   const { feedPosts, hasMorePosts, loadingFeed, loadingMorePosts, fetchFeed, loadMoreFeed, createPost, likePost, addComment, likeComment, replyToComment, loadPostComments, loadMorePostComments } = usePosts();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,13 +43,13 @@ function FeedPageContent() {
   }, [loading, router, user]);
 
   useEffect(() => {
-    if (!user || !token) return;
+    if (!user) return;
     setFeedError("");
     fetchFeed({ search: searchQuery, reset: true }).catch((error) => {
       console.error(error);
       setFeedError(error instanceof Error ? error.message : "Failed to load feed");
     });
-  }, [fetchFeed, searchQuery, token, user]);
+  }, [fetchFeed, searchQuery, user]);
 
   const handleSearch = (query: string) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);

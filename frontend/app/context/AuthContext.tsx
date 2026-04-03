@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { apiUrl, socketBaseUrl } from "../lib/api";
-import { requestJson } from "../lib/request";
+import { invalidateRequestCache, requestJson } from "../lib/request";
 
 export interface User {
   id: number;
@@ -16,9 +16,8 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   socket: Socket | null;
-  login: (token: string, user: User) => void;
+  login: (user: User) => void;
   logout: () => void;
   loading: boolean;
   notifications: any[];
@@ -31,7 +30,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -39,35 +37,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Check for token in localStorage on mount
-    const storedToken = localStorage.getItem("token");
-    if (storedToken) {
-      setToken(storedToken);
-      fetchUser(storedToken);
-    } else {
-      // try cookie-based auth if available (httpOnly cookie)
-      fetchUser();
-    }
+    fetchUser();
   }, []);
 
-  const fetchUser = async (authToken?: string) => {
+  const fetchUser = async () => {
     try {
-      const headers: Record<string, string> = {};
-      if (authToken) headers.Authorization = `Bearer ${authToken}`;
-
       const data = await requestJson<any>(apiUrl("/api/auth/me"), {
-        headers,
         credentials: "include",
       });
 
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-        setToken(data.token);
-      }
       setUser(data.user);
     } catch (e) {
-      localStorage.removeItem("token");
-      setToken(null);
+      invalidateRequestCache();
       setUser(null);
       setNotifications([]);
       setUnread(0);
@@ -77,14 +58,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const fetchNotifications = async (authToken?: string) => {
+  const fetchNotifications = async () => {
     try {
-      const t = authToken || token;
-      if (!t) return;
+      if (!user) return;
+
       const data = await requestJson<any>(apiUrl("/api/notifications"), {
-        headers: { Authorization: `Bearer ${t}` },
+        credentials: "include",
       }, {
-        dedupeKey: `notifications:${t}`,
+        dedupeKey: `notifications:${user.id}`,
         cacheTtlMs: 3000,
       });
       setNotifications(data.notifications || []);
@@ -94,9 +75,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = (newToken: string, loggedUser: User) => {
-    localStorage.setItem("token", newToken);
-    setToken(newToken);
+  const login = (loggedUser: User) => {
+    invalidateRequestCache();
     setUser(loggedUser);
     router.push("/feed"); // Or / depending on where feed is
   };
@@ -106,8 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       fetch(apiUrl("/api/auth/logout"), { method: "POST", credentials: "include" }).catch(() => {});
     } catch (e) {}
-    localStorage.removeItem("token");
-    setToken(null);
+    invalidateRequestCache();
     setUser(null);
     setNotifications([]);
     setUnread(0);
@@ -116,11 +95,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // mark all read
   const markAllRead = async () => {
-    if (!token) return;
+    if (!user) return;
     try {
-      await fetch(apiUrl("/api/notifications/mark-all-read"), {
+      await requestJson(apiUrl("/api/notifications/mark-all-read"), {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       setNotifications((n) => n.map((x) => ({ ...x, is_read: true })));
       setUnread(0);
@@ -130,11 +109,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const markRead = async (id: number) => {
-    if (!token) return;
+    if (!user) return;
     try {
-      await fetch(apiUrl(`/api/notifications/${id}/read`), {
+      await requestJson(apiUrl(`/api/notifications/${id}/read`), {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       setNotifications((n) => n.map((x) => (x.id === id ? { ...x, is_read: true } : x)));
       setUnread((u) => Math.max(0, u - 1));
@@ -145,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // setup socket and fetch notifications when user available
-    if (!user || !token) return;
+    if (!user) return;
     const s = io(socketBaseUrl, { withCredentials: true });
     setSocket(s);
 
@@ -163,16 +142,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // initial fetch
-    fetchNotifications(token);
+    fetchNotifications();
 
     return () => {
       s.disconnect();
       setSocket(null);
     };
-  }, [user, token]);
+  }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, token, socket, login, logout, loading, notifications, unread, markAllRead, markRead }}>
+    <AuthContext.Provider value={{ user, socket, login, logout, loading, notifications, unread, markAllRead, markRead }}>
       {children}
     </AuthContext.Provider>
   );
