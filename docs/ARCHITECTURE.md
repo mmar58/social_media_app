@@ -2,10 +2,18 @@
 
 ## Overview
 
-The repository is a two-application system:
+The repository is a two-application system designed to satisfy the Appifylab selection task requirements while demonstrating patterns suitable for large-scale social feed products.
 
-- The frontend is a Next.js App Router application that renders login, registration, and feed pages.
-- The backend is an Express API that handles authentication, posts, comments, likes, notifications, uploads, and Socket.IO events.
+Key design choices that directly serve the task:
+
+- **httpOnly cookie auth** protects JWT tokens from XSS without requiring Authorization headers on every request.
+- **Cursor-based feed pagination** keeps feed reads fast as the post count grows beyond millions.
+- **Batched post hydration** eliminates N+1 query patterns when loading a page of posts with likes and comments.
+- **Centralized notification service** keeps route handlers thin and makes it easy to add new notification types or replace inline delivery with async jobs.
+- **Shared frontend state** (`PostContext`) ensures the feed card and notification modal always operate on the same post record, eliminating stale UI divergence.
+
+The frontend is a Next.js App Router application that renders login, registration, and feed pages.
+The backend is an Express API that handles authentication, posts, comments, likes, notifications, uploads, and Socket.IO events.
 
 At runtime the browser talks to the backend over both HTTP and WebSocket connections:
 

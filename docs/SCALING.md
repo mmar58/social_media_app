@@ -4,7 +4,15 @@
 
 This document explains how to evolve the current implementation into a system that can handle very large traffic, including millions of users.
 
-The current codebase is a strong functional base, but it is not yet production-shaped for that scale.
+The selection task explicitly asks to "design the system assuming millions of posts and reads." The current codebase includes the foundational decisions that make that path viable:
+
+- **Cursor-based pagination**: feed reads scale regardless of table size because they index-seek rather than scan.
+- **Batched hydration**: feed pages resolve all post metadata in a fixed number of queries, not one per post.
+- **Explicit schema indexes**: common filter and sort paths are covered so the database does not fall back to full table scans.
+- **Centralized notification service**: side effects are isolated from route handlers, making async job extraction straightforward.
+- **Environment-scoped configuration**: all service URLs are environment-driven so the same build deploys to any topology.
+
+The sections below describe the gaps that remain and the order to close them.
 
 ## Current bottlenecks
 
