@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
 import { usePosts } from "../context/PostContext";
@@ -20,6 +20,18 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [notifyMenuOpen, setNotifyMenuOpen] = useState(false);
+  const notifyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (notifyRef.current && !notifyRef.current.contains(e.target as Node)) {
+        setNotifyOpen(false);
+        setNotifyMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   const [notificationFilter, setNotificationFilter] = useState<"all" | "unread">("all");
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -142,7 +154,7 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
                 </li>
                 <li className="nav-item _header_nav_item">
                   {/* Notification center */}
-                  <div style={{ position: "relative" }}>
+                  <div ref={notifyRef} style={{ position: "relative" }}>
                     <button
                       type="button"
                       className="nav-link _header_nav_link _header_notify_btn"
