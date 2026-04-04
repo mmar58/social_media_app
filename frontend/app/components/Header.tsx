@@ -21,10 +21,13 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [notifyMenuOpen, setNotifyMenuOpen] = useState(false);
   const notifyRef = useRef<HTMLDivElement>(null);
+  const mobileNotifyPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (notifyRef.current && !notifyRef.current.contains(e.target as Node)) {
+      const inDesktopRef = notifyRef.current?.contains(e.target as Node);
+      const inMobilePanel = mobileNotifyPanelRef.current?.contains(e.target as Node);
+      if (!inDesktopRef && !inMobilePanel) {
         setNotifyOpen(false);
         setNotifyMenuOpen(false);
       }
@@ -104,6 +107,123 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
     }
   };
 
+  const notificationPanelContent = (
+    <>
+      <div className="_notifications_content">
+        <h4 className="_notifications_content_title">Notifications</h4>
+        <div className="_notification_box_right">
+          <button
+            type="button"
+            className="_notification_box_right_link"
+            onClick={() => setNotifyMenuOpen(!notifyMenuOpen)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="4" height="17" fill="none" viewBox="0 0 4 17">
+              <circle cx="2" cy="2" r="2" fill="#C4C4C4"></circle>
+              <circle cx="2" cy="8" r="2" fill="#C4C4C4"></circle>
+              <circle cx="2" cy="15" r="2" fill="#C4C4C4"></circle>
+            </svg>
+          </button>
+          <div className="_notifications_drop_right" style={{ display: notifyMenuOpen ? "block" : "none" }}>
+            <ul className="_notification_list" style={{ margin: 0, padding: 0, listStyle: "none" }}>
+              <li className="_notification_item">
+                <button
+                  type="button"
+                  className="_notification_link"
+                  style={{ border: "none", background: "transparent", padding: 0, textAlign: "left" }}
+                  onClick={async () => {
+                    await markAllRead();
+                    setNotifyMenuOpen(false);
+                  }}
+                >
+                  Mark all as read
+                </button>
+              </li>
+              <li className="_notification_item">
+                <button
+                  type="button"
+                  className="_notification_link"
+                  style={{ border: "none", background: "transparent", padding: 0, textAlign: "left" }}
+                  onClick={() => {
+                    setNotificationFilter("unread");
+                    setNotifyMenuOpen(false);
+                  }}
+                >
+                  Show unread only
+                </button>
+              </li>
+              <li className="_notification_item">
+                <button
+                  type="button"
+                  className="_notification_link"
+                  style={{ border: "none", background: "transparent", padding: 0, textAlign: "left" }}
+                  onClick={() => {
+                    setNotificationFilter("all");
+                    setNotifyMenuOpen(false);
+                  }}
+                >
+                  Show all notifications
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div className="_notifications_drop_box">
+        <div className="_notifications_drop_btn_grp">
+          <button
+            type="button"
+            className={notificationFilter === "all" ? "_notifications_btn_link" : "_notifications_btn_link1"}
+            onClick={() => setNotificationFilter("all")}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            className={notificationFilter === "unread" ? "_notifications_btn_link" : "_notifications_btn_link1"}
+            onClick={() => setNotificationFilter("unread")}
+          >
+            Unread
+          </button>
+        </div>
+        <div className="_notifications_all">
+          {visibleNotifications.length === 0 && (
+            <div className="_notification_box" style={{ cursor: "default" }}>
+              <div className="_notification_txt">
+                <p className="_notification_para">
+                  <span>No notifications found.</span>
+                </p>
+              </div>
+            </div>
+          )}
+          {visibleNotifications.map((notification) => (
+            <div
+              key={notification.id}
+              className="_notification_box"
+              style={{ background: notification.is_read ? "transparent" : "#1890ff0f" }}
+              onClick={() => handleNotificationOpen(notification.id)}
+            >
+              <div className="_notification_image">
+                <img
+                  src={notification.senderProfile || assetUrl("/assets/images/profile.png")}
+                  alt={notification.senderName}
+                  className="_notify_img"
+                />
+              </div>
+              <div className="_notification_txt">
+                <p className="_notification_para">
+                  <span>{notification.senderName}</span> {getNotificationMessage(notification)}
+                </p>
+                <div className="_nitification_time">
+                  <span>{getTimeAgo(notification.created_at)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <>
       {/* Desktop Header */}
@@ -170,118 +290,7 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
                       style={{ left: "auto", right: -110, height: "calc(100vh - 90px)", zIndex: 99 }}
                       className={`_notification_dropdown ${notifyOpen ? "show" : ""}`}
                     >
-                        <div className="_notifications_content">
-                          <h4 className="_notifications_content_title">Notifications</h4>
-                          <div className="_notification_box_right">
-                            <button
-                              type="button"
-                              className="_notification_box_right_link"
-                              onClick={() => setNotifyMenuOpen(!notifyMenuOpen)}
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="4" height="17" fill="none" viewBox="0 0 4 17">
-                                <circle cx="2" cy="2" r="2" fill="#C4C4C4"></circle>
-                                <circle cx="2" cy="8" r="2" fill="#C4C4C4"></circle>
-                                <circle cx="2" cy="15" r="2" fill="#C4C4C4"></circle>
-                              </svg>
-                            </button>
-                            <div className="_notifications_drop_right" style={{ display: notifyMenuOpen ? "block" : "none" }}>
-                              <ul className="_notification_list" style={{ margin: 0, padding: 0, listStyle: "none" }}>
-                                <li className="_notification_item">
-                                  <button
-                                    type="button"
-                                    className="_notification_link"
-                                    style={{ border: "none", background: "transparent", padding: 0, textAlign: "left" }}
-                                    onClick={async () => {
-                                      await markAllRead();
-                                      setNotifyMenuOpen(false);
-                                    }}
-                                  >
-                                    Mark all as read
-                                  </button>
-                                </li>
-                                <li className="_notification_item">
-                                  <button
-                                    type="button"
-                                    className="_notification_link"
-                                    style={{ border: "none", background: "transparent", padding: 0, textAlign: "left" }}
-                                    onClick={() => {
-                                      setNotificationFilter("unread");
-                                      setNotifyMenuOpen(false);
-                                    }}
-                                  >
-                                    Show unread only
-                                  </button>
-                                </li>
-                                <li className="_notification_item">
-                                  <button
-                                    type="button"
-                                    className="_notification_link"
-                                    style={{ border: "none", background: "transparent", padding: 0, textAlign: "left" }}
-                                    onClick={() => {
-                                      setNotificationFilter("all");
-                                      setNotifyMenuOpen(false);
-                                    }}
-                                  >
-                                    Show all notifications
-                                  </button>
-                                </li>
-                              </ul>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="_notifications_drop_box">
-                          <div className="_notifications_drop_btn_grp">
-                            <button
-                              type="button"
-                              className={notificationFilter === "all" ? "_notifications_btn_link" : "_notifications_btn_link1"}
-                              onClick={() => setNotificationFilter("all")}
-                            >
-                              All
-                            </button>
-                            <button
-                              type="button"
-                              className={notificationFilter === "unread" ? "_notifications_btn_link" : "_notifications_btn_link1"}
-                              onClick={() => setNotificationFilter("unread")}
-                            >
-                              Unread
-                            </button>
-                          </div>
-                          <div className="_notifications_all">
-                            {visibleNotifications.length === 0 && (
-                              <div className="_notification_box" style={{ cursor: "default" }}>
-                                <div className="_notification_txt">
-                                  <p className="_notification_para">
-                                    <span>No notifications found.</span>
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                            {visibleNotifications.map((notification) => (
-                              <div
-                                key={notification.id}
-                                className="_notification_box"
-                                style={{ background: notification.is_read ? "transparent" : "#1890ff0f" }}
-                                onClick={() => handleNotificationOpen(notification.id)}
-                              >
-                                <div className="_notification_image">
-                                  <img
-                                    src={notification.senderProfile || assetUrl("/assets/images/profile.png")}
-                                    alt={notification.senderName}
-                                    className="_notify_img"
-                                  />
-                                </div>
-                                <div className="_notification_txt">
-                                  <p className="_notification_para">
-                                    <span>{notification.senderName}</span> {getNotificationMessage(notification)}
-                                  </p>
-                                  <div className="_nitification_time">
-                                    <span>{getTimeAgo(notification.created_at)}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                      {notificationPanelContent}
                     </div>
                   </div>
                 </li>
@@ -391,6 +400,29 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
         </div>
       </div>
 
+      {/* Mobile Notification Panel */}
+      {notifyOpen && (
+        <div
+          ref={mobileNotifyPanelRef}
+          className="_notifications_mobile"
+          style={{
+            display: "block",
+            position: "fixed",
+            top: "56px",
+            bottom: "68px",
+            left: 0,
+            right: 0,
+            zIndex: 1029,
+            overflowY: "auto",
+            background: "var(--bg2)",
+            padding: "16px",
+            boxShadow: "rgb(149 157 165 / 20%) 0px 8px 24px",
+          }}
+        >
+          {notificationPanelContent}
+        </div>
+      )}
+
       {/* Mobile Bottom Navigation */}
       <div className="_mobile_navigation_bottom_wrapper">
         <div className="_mobile_navigation_bottom_wrap">
@@ -414,11 +446,18 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
                     </a>
                   </li>
                   <li className="_mobile_navigation_bottom_item">
-                    <a href="#0" className="_mobile_navigation_bottom_link">
+                    <button
+                      type="button"
+                      className="_mobile_navigation_bottom_link"
+                      style={{ background: "transparent", border: "none", padding: 0, position: "relative", cursor: "pointer" }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => setNotifyOpen(!notifyOpen)}
+                    >
                       <svg xmlns="http://www.w3.org/2000/svg" width="25" height="27" fill="none" viewBox="0 0 25 27">
                         <path className="_dark_svg" fill="#000" fillOpacity=".6" fillRule="evenodd" d="M10.17 23.46c.671.709 1.534 1.098 2.43 1.098.9 0 1.767-.39 2.44-1.099.36-.377.976-.407 1.374-.067.4.34.432.923.073 1.3-1.049 1.101-2.428 1.708-3.886 1.708h-.003c-1.454-.001-2.831-.608-3.875-1.71a.885.885 0 01.072-1.298 1.01 1.01 0 011.374.068zM12.663 0c5.768 0 9.642 4.251 9.642 8.22 0 2.043.549 2.909 1.131 3.827.576.906 1.229 1.935 1.229 3.88-.453 4.97-5.935 5.375-12.002 5.375-6.067 0-11.55-.405-11.998-5.296-.004-2.024.649-3.053 1.225-3.959l.203-.324c.501-.814.928-1.7.928-3.502C3.022 4.25 6.897 0 12.664 0zm0 1.842C8.13 1.842 4.97 5.204 4.97 8.22c0 2.553-.75 3.733-1.41 4.774-.531.836-.95 1.497-.95 2.932.216 2.316 1.831 3.533 10.055 3.533 8.178 0 9.844-1.271 10.06-3.613-.004-1.355-.423-2.016-.954-2.852-.662-1.041-1.41-2.221-1.41-4.774 0-3.017-3.161-6.38-7.696-6.38z" clipRule="evenodd" />
                       </svg>
-                    </a>
+                      {unread > 0 && <span className="_counting">{unread}</span>}
+                    </button>
                   </li>
                   <li className="_mobile_navigation_bottom_item">
                     <a href="#0" className="_mobile_navigation_bottom_link">
