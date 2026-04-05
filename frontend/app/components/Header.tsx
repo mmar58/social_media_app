@@ -406,7 +406,6 @@ export default function Header({ searchQuery = "", onSearch }: HeaderProps) {
           ref={mobileNotifyPanelRef}
           className="_notifications_mobile"
           style={{
-            display: "block",
             position: "fixed",
             top: "56px",
             bottom: "68px",
